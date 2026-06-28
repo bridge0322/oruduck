@@ -1,0 +1,189 @@
+/* tokens/colors.css */
+/* オルコギ color system.
+   Palette is derived from a Pembroke Welsh Corgi: golden-wheat fur, white
+   blaze/belly, cocoa nose, rosy cheeks — on a warm cream ground.
+   Money-growth states borrow a fresh leaf green (gains) and soft coral (loss). */
+:root {
+  /* ---- Cream (warm neutral backgrounds) ---- */
+  --cream-50:  #FFFCF7;
+  --cream-100: #FFF6EA;
+  --cream-200: #FBEAD6;
+  --cream-300: #F3DBC0;
+
+  /* ---- Fur (golden-wheat — the brand color) ---- */
+  --fur-100: #FBEAD0;
+  --fur-200: #F6D7A6;
+  --fur-300: #EFC07E;
+  --fur-400: #E5A557;
+  --fur-500: #D9883B;  /* brand primary */
+  --fur-600: #BF6E27;
+  --fur-700: #9A551C;
+
+  /* ---- Cocoa (warm ink — nose, outlines, text) ---- */
+  --cocoa-400: #8A715E;
+  --cocoa-600: #5C4434;
+  --cocoa-800: #43332A;
+  --cocoa-900: #2E2118;
+
+  /* ---- Leaf (growth / positive) ---- */
+  --leaf-100: #E2F1DF;
+  --leaf-300: #93CE9A;
+  --leaf-500: #4F9E5E;
+  --leaf-700: #36703F;
+
+  /* ---- Coral (loss / alert, intentionally soft) ---- */
+  --coral-100: #FBE2DC;
+  --coral-300: #F2A99B;
+  --coral-500: #E16A53;
+  --coral-700: #B14834;
+
+  /* ---- Sky (secondary / info / trust) ---- */
+  --sky-100: #DCEEF6;
+  --sky-300: #93C7E0;
+  --sky-500: #4E97C2;
+
+  /* ---- Blush (cheek accent for cuteness) ---- */
+  --blush-300: #F8C4BB;
+  --blush-400: #F2A096;
+
+  /* ---- Pure ---- */
+  --white: #FFFFFF;
+
+  /* ---------- Semantic aliases ---------- */
+  --surface-app:    var(--cream-50);   /* app background */
+  --surface-sunken: var(--cream-100);  /* recessed areas, lists */
+  --surface-card:   var(--white);      /* cards, sheets */
+  --surface-fur:    var(--fur-100);    /* warm tinted panels */
+
+  --text-strong: var(--cocoa-900);
+  --text-body:   var(--cocoa-800);
+  --text-muted:  var(--cocoa-400);
+  --text-on-fur: var(--white);
+  --text-brand:  var(--fur-700);
+
+  --brand:        var(--fur-500);
+  --brand-hover:  var(--fur-600);
+  --brand-press:  var(--fur-700);
+  --brand-soft:   var(--fur-100);
+
+  --positive: var(--leaf-500);
+  --positive-soft: var(--leaf-100);
+  --negative: var(--coral-500);
+  --negative-soft: var(--coral-100);
+  --info: var(--sky-500);
+  --info-soft: var(--sky-100);
+
+  --border:        #EFE0CC;  /* warm hairline */
+  --border-strong: #E2CDAE;
+  --focus-ring:    var(--fur-400);
+}
+
+/* tokens/typography.css */
+/* オルコギ typography. Rounded gothic throughout for a soft, friendly tone. */
+:root {
+  --font-display: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', system-ui, sans-serif;
+  --font-body: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', system-ui, sans-serif;
+  /* Big yen figures use the display family at heaviest weight. */
+  --font-number: 'Zen Maru Gothic', system-ui, sans-serif;
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+  --weight-black: 900;
+
+  /* Type scale (px) — generous, app-first */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-md: 17px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 30px;
+  --text-3xl: 38px;
+  --text-4xl: 48px;
+  --text-display: 64px;  /* hero yen value */
+
+  /* Line heights */
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.55;
+
+  /* Letter spacing — JP rounded gothic reads best near 0; loosen labels slightly */
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+}
+
+/* tokens/spacing.css */
+/* オルコギ spacing — 4px base grid. */
+:root {
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* Layout */
+  --gutter: 20px;          /* default screen side padding (mobile) */
+  --card-pad: 20px;
+  --max-app-width: 440px;  /* phone-first canvas */
+}
+
+/* tokens/radius-shadow.css */
+/* オルコギ radii & shadows. Generous rounding + soft warm shadows = cuddly. */
+:root {
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --radius-card: 24px;
+  --radius-pill: 999px;
+
+  /* Shadows are warm (cocoa-tinted), never neutral gray. Soft + diffuse. */
+  --shadow-sm: 0 1px 2px rgba(92, 68, 52, 0.06), 0 2px 6px rgba(92, 68, 52, 0.06);
+  --shadow-md: 0 4px 10px rgba(92, 68, 52, 0.08), 0 12px 24px rgba(92, 68, 52, 0.07);
+  --shadow-lg: 0 10px 20px rgba(92, 68, 52, 0.10), 0 24px 48px rgba(92, 68, 52, 0.10);
+  /* Pressed/inset look for sunken wells (progress tracks etc). */
+  --shadow-inset: inset 0 2px 4px rgba(92, 68, 52, 0.10);
+  /* Lifted brand button */
+  --shadow-brand: 0 6px 16px rgba(217, 136, 59, 0.32);
+}
+
+/* tokens/motion.css */
+/* オルコギ motion. Playful but never jittery: gentle springy ease + soft bounce
+   reserved for celebratory moments (corgi growth, milestone reached). */
+:root {
+  --ease-standard: cubic-bezier(0.32, 0.72, 0.28, 1);   /* @kind other */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);            /* @kind other */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);     /* @kind other */
+
+  --dur-fast: 140ms;       /* @kind other */
+  --dur-base: 240ms;       /* @kind other */
+  --dur-slow: 420ms;       /* @kind other */
+  --dur-celebrate: 700ms;  /* @kind other */
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--surface-sunken); font-family: var(--font-body); -webkit-text-size-adjust: 100%; }
+#root { min-height: 100vh; min-height: 100dvh; }
+
+/* keyframes: corgi-bob, sheet-up (base UI), and the feast event animations */
+@keyframes corgi-bob { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-6px) rotate(-1.5deg); } }
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes rain-fall { 0% { transform: translateY(-20%); } 100% { transform: translateY(120%); } }
+@keyframes sway { 0%,100% { transform: translateX(0) rotate(0); } 50% { transform: translateX(-3px) rotate(-2deg); } }
+@keyframes chomp { 0%,100% { transform: scale(1); } 30% { transform: scale(1.12,0.9); } 60% { transform: scale(0.95,1.08); } }
+@keyframes heart-up { 0% { transform: translateY(0) scale(0.6); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-120px) scale(1.1); opacity: 0; } }
+@keyframes food-drop { 0% { transform: translateY(-160px) scale(0.6); opacity: 0; } 55% { transform: translateY(8px) scale(1.05); opacity: 1; } 70% { transform: translateY(0) scale(1); } 100% { transform: translateY(0) scale(1); } }
+@keyframes pop-in { 0% { transform: scale(0.3); opacity: 0; } 60% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes flash { 0%,92%,100% { opacity: 0; } 94%,97% { opacity: 0.55; } }
+@keyframes xp-fill { from { width: 0; } }
