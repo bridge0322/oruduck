@@ -5,4 +5,10 @@ import "@phosphor-icons/web/fill";
 import "./tokens.css";
 import { App } from "./features/tracker/App";
 
+// データ（localStorage）をできるだけ消されにくくする。ブラウザに「永続ストレージ」を要求。
+// ホーム画面に追加して使うと、より確実に保持されます。
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(() => {});
+}
+
 createRoot(document.getElementById("root")!).render(<App />);
