@@ -15,10 +15,11 @@ export function CorgiRoom({ level, amount = 2000000, height = 360, onTap }: Corg
   const [w, setW] = useState(360);
   const [x, setX] = useState(0.5);
   const [dir, setDir] = useState(1);
-  const [mode, setMode] = useState<"walk" | "sit" | "idle">("walk");
+  const [mode, setMode] = useState<"walk" | "sit" | "idle" | "spin" | "hop">("walk");
   const [phase, setPhase] = useState(0);
   const [jump, setJump] = useState(0);
   const targetX = useRef(0.5), modeTimer = useRef(0), jumpRef = useRef(0);
+  const spinTimer = useRef(0), hopTimer = useRef(0);
   const FLOOR_Y = 0.62;
 
   useEffect(() => {
@@ -37,9 +38,12 @@ export function CorgiRoom({ level, amount = 2000000, height = 360, onTap }: Corg
       else if (jumpRef.current !== 0) { jumpRef.current = 0; setJump(0); }
       modeTimer.current -= dt;
       if (modeTimer.current <= 0) {
-        const r = Math.random();
         if (mode === "walk") {
-          if (r < 0.35) { setMode(r < 0.18 ? "sit" : "idle"); modeTimer.current = 1.5 + Math.random() * 2; }
+          const r = Math.random();
+          if (r < 0.16) { setMode("sit"); modeTimer.current = 1.6 + Math.random() * 2.2; }
+          else if (r < 0.30) { setMode("idle"); modeTimer.current = 1.4 + Math.random() * 2; }
+          else if (r < 0.42) { setMode("spin"); spinTimer.current = 0; modeTimer.current = 1.3 + Math.random() * 0.8; }
+          else if (r < 0.54) { setMode("hop"); hopTimer.current = 0; modeTimer.current = 1.4 + Math.random() * 1.0; }
           else { targetX.current = 0.1 + Math.random() * 0.8; modeTimer.current = 2 + Math.random() * 3; }
         } else {
           setMode("walk"); targetX.current = 0.1 + Math.random() * 0.8; modeTimer.current = 2 + Math.random() * 3;
@@ -52,6 +56,16 @@ export function CorgiRoom({ level, amount = 2000000, height = 360, onTap }: Corg
           const nd = Math.sign(d); setDir(nd);
           return cx + nd * Math.min(speed, Math.abs(d));
         });
+      }
+      // くるん♪：その場でくるくる向きを変える
+      if (mode === "spin") {
+        spinTimer.current -= dt;
+        if (spinTimer.current <= 0) { setDir((d) => -d); spinTimer.current = 0.22; }
+      }
+      // ぴょん！：その場で何度かジャンプ
+      if (mode === "hop") {
+        hopTimer.current -= dt;
+        if (hopTimer.current <= 0) { jumpRef.current = 16; setJump(16); hopTimer.current = 0.62; }
       }
       raf = requestAnimationFrame(loop);
     };
@@ -73,11 +87,11 @@ export function CorgiRoom({ level, amount = 2000000, height = 360, onTap }: Corg
       <div style={{ position: "absolute", left: "50%", bottom: "8%", width: "70%", height: 40, transform: "translateX(-50%)", background: "#F4C9C0", borderRadius: "50%", opacity: 0.7 }}/>
       <div style={{ position: "absolute", left: "22%", bottom: "12%", fontSize: 22 }}>🎾</div>
       <div onClick={handleTap} style={{ position: "absolute", left: px, top: floorPx - ch, width: corgiW, height: ch, transform: `scaleX(${dir})`, cursor: "pointer" }}>
-        <RoomCorgi level={lv} badge={ROOM_STAGES[lv - 1].badge} walkPhase={phase} state={mode} jump={jump}/>
+        <RoomCorgi level={lv} badge={ROOM_STAGES[lv - 1].badge} walkPhase={phase} state={mode === "walk" ? "walk" : mode === "sit" ? "sit" : "idle"} jump={jump}/>
       </div>
       {mode !== "walk" && (
         <div style={{ position: "absolute", left: px + corgiW * 0.5, top: floorPx - ch - 6, transform: "translateX(-50%)", background: "#fff", padding: "2px 10px", borderRadius: 999, fontSize: 16, border: "2px solid #F0E0C8", whiteSpace: "nowrap", pointerEvents: "none" }}>
-          {mode === "sit" ? "おすわり" : "💛"}
+          {mode === "sit" ? "おすわり" : mode === "spin" ? "くるん♪" : mode === "hop" ? "ぴょん！" : "💛"}
         </div>
       )}
     </div>
