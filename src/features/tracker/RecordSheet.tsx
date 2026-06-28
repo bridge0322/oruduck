@@ -9,14 +9,14 @@ import { YEN } from "./logic/format";
 import type { Record_ } from "./logic/persistence";
 
 export interface RecordSheetProps {
-  cur: Record_;
+  cur: Record_ | null;
   onClose: () => void;
   onSave: (rec: { principal: number | null; value: number }) => void;
 }
 
 export function RecordSheet({ cur, onClose, onSave }: RecordSheetProps) {
-  const [principal, setPrincipal] = useState(String(cur.principal));
-  const [value, setValue] = useState(String(cur.value));
+  const [principal, setPrincipal] = useState(cur ? String(cur.principal) : "");
+  const [value, setValue] = useState(cur ? String(cur.value) : "");
   const p = toNum(principal), v = toNum(value);
   const ok = !isNaN(p) && !isNaN(v) && p > 0;
   const rate = ok ? ((v - p) / p) * 100 : 0;

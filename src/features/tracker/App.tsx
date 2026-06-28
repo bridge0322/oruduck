@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "../../design-system/Button";
 import { BottomNav } from "../../design-system/BottomNav";
 import { Card } from "../../design-system/Card";
+import { CorgiRoom } from "../../design-system/CorgiRoom";
 import { Hero } from "./Hero";
 import { BalanceCard } from "./BalanceCard";
 import { RecordSheet } from "./RecordSheet";
@@ -26,7 +27,7 @@ export function App() {
   const [tab, setTab] = useState("home");
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [feastFx, setFeastFx] = useState<FeastFx | null>(null);
-  const cur = data.records[data.records.length - 1];
+  const cur = data.records.length ? data.records[data.records.length - 1] : null;
   const peak = peakOf(data.records);
   const canFeed = canFeedToday(data.lastFed);
   const streak = feedStreak(data.feasts);
@@ -35,8 +36,8 @@ export function App() {
 
   const addRecord = ({ principal, value }: { principal: number | null; value: number }) => {
     setData((d) => {
-      const prev = d.records[d.records.length - 1];
-      const p = principal == null ? prev.principal : principal;
+      const prev = d.records.length ? d.records[d.records.length - 1] : null;
+      const p = principal == null ? (prev ? prev.principal : value) : principal;
       return { ...d, records: [...d.records, { t: Date.now(), principal: p, value }] };
     });
     setSheet(null);
@@ -70,9 +71,26 @@ export function App() {
       <main style={{ flex: 1, overflowY: "auto", padding: "0 20px 24px" }}>
         {tab === "home" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Hero cur={cur} peak={peak} />
-            <DailyFeedCard canFeed={canFeed} streak={streak} onFeed={feed} />
-            <BalanceCard cur={cur} />
+            {cur ? (
+              <>
+                <Hero cur={cur} peak={peak} />
+                <DailyFeedCard canFeed={canFeed} streak={streak} onFeed={feed} />
+                <BalanceCard cur={cur} />
+              </>
+            ) : (
+              <>
+                <Card tone="fur" elevation="md" padding="14px" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <CorgiRoom amount={0} height={236} />
+                  <div style={{ textAlign: "center", fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>
+                    はじめまして ワン！
+                  </div>
+                  <div style={{ textAlign: "center", fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", lineHeight: 1.6 }}>
+                    まだ記録がありません。<br />「記録する」か「取り込む」で、最初の金額を入力してね 🐾
+                  </div>
+                </Card>
+                <DailyFeedCard canFeed={canFeed} streak={streak} onFeed={feed} />
+              </>
+            )}
             <Card elevation="sm" style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 40, height: 40, flex: "none", borderRadius: "var(--radius-md)", background: "var(--brand-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>⭐</div>
               <div style={{ flex: 1 }}>
