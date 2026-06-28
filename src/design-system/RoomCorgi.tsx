@@ -22,8 +22,8 @@ export function RoomCorgi({ level, badge, walkPhase, state, jump = 0 }: RoomCorg
   return (
     <svg viewBox="0 0 400 388" width="100%" height="100%" style={{ display: "block", overflow: "visible" }}>
       <defs><style>{`.cr-ol{stroke:#7A5230;stroke-width:9;stroke-linejoin:round;stroke-linecap:round;}.cr-tn{stroke:#7A5230;stroke-width:6;fill:none;stroke-linecap:round;}`}</style></defs>
-      <ellipse cx="200" cy={376} rx={70 * p.bodyScale} ry={11 * p.bodyScale} fill="#000" opacity="0.12"/>
-      <g transform={`translate(0 ${-lift + sitDrop})`}>
+      <ellipse cx="200" cy={376} rx={61 * p.bodyScale} ry={11 * p.bodyScale} fill="#000" opacity="0.12"/>
+      <g transform={`translate(0 ${-lift + sitDrop}) translate(200 250) scale(0.86 1.0) translate(-200 -250)`}>
         <g transform={`translate(200 250) scale(${p.bodyScale} ${p.bodyScale * p.bodyStretch}) translate(-200 -250)`}>
           <g transform={`rotate(${tailWag} 122 256)`}><path fill="#E3A857" className="cr-ol" d="M124 250 q-30 -6 -34 -34 q-2 -16 12 -16 q10 14 6 30 q14 6 16 20 z"/></g>
           <path className="cr-ol" fill="#E3A857" d="M200 150 C150 150 120 185 120 245 C120 312 150 348 200 348 C250 348 280 312 280 245 C280 185 250 150 200 150 Z"/>

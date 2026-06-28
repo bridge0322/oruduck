@@ -39,7 +39,7 @@ export function roomParamsFor(level: number): RoomParams {
   const lerp = (a: number, b: number) => a + (b - a) * t;
   return {
     bodyScale: lerp(0.62, 1.0),
-    bodyStretch: lerp(0.92, 1.12),
+    bodyStretch: lerp(0.97, 1.03),
     earUp: lerp(0.35, 1.0),
     eyeSize: lerp(1.25, 0.92),
     cheek: lerp(1.15, 0.85),

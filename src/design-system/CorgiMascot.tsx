@@ -37,7 +37,7 @@ export function CorgiMascot({ stage = "adult", condition = "happy", size = 160, 
   const Egg=(<g transform="translate(0 8)"><g stroke={OL} strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"><path fill={CREAM} d="M200 70 C262 70 300 168 300 240 C300 308 256 350 200 350 C144 350 100 308 100 240 C100 168 138 70 200 70 Z"/><path fill="none" d="M100 222 L138 208 L162 234 L194 212 L222 240 L252 216 L282 236 L300 226"/></g><circle cx="160" cy="150" r="8" fill={TAN} opacity="0.6"/><circle cx="248" cy="186" r="6" fill={TAN} opacity="0.6"/><circle cx="170" cy="262" r="10" fill={TAN} opacity="0.5"/><g fill={TAN} stroke={OL} strokeWidth="8" strokeLinejoin="round"><path d="M162 100 C150 64 153 44 164 47 C174 56 173 84 162 100 Z"/><path d="M238 100 C250 64 247 44 236 47 C226 56 227 84 238 100 Z"/></g><path d="M170 168 Q182 178 194 168" fill="none" stroke={DARK} strokeWidth="7" strokeLinecap="round"/><path d="M206 168 Q218 178 230 168" fill="none" stroke={DARK} strokeWidth="7" strokeLinecap="round"/></g>);
   const SC=({egg:1,puppy:0.8,young:0.91,adult:1,legend:1.06} as Record<string,number>)[stage]||1;
   const Dog=(
-    <g transform={`translate(200 250) scale(${SC}) translate(-200 -250)`}>
+    <g transform={`translate(200 250) scale(${SC * 0.86} ${SC}) translate(-200 -250)`}>
       {c.aura==="sparkle"&&Sparkles}{c.aura==="cold"&&Shiver}
       <path className="m-ol" fill={TAN} d="M124 250 q-30 -6 -34 -34 q-2 -16 12 -16 q10 14 6 30 q14 6 16 20 z" transform="rotate(-12 122 234)"/>
       <path className="m-ol" fill={TAN} d="M200 150 C150 150 120 185 120 245 C120 312 150 348 200 348 C250 348 280 312 280 245 C280 185 250 150 200 150 Z"/>
