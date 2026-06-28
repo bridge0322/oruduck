@@ -25,7 +25,7 @@ export function WeatherScene({ state, height = 236 }: WeatherSceneProps) {
       )}
       {state.weather === "storm" && <div style={{ position: "absolute", inset: 0, background: "#fff", animation: "flash 3.5s ease-in-out infinite", pointerEvents: "none" }} />}
       {state.bubble && (
-        <div style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)", background: "#fff", padding: "8px 14px", borderRadius: 16, fontFamily: "var(--font-body)", fontWeight: 800, fontSize: "var(--text-sm)", color: "var(--text-strong)", boxShadow: "var(--shadow-sm)", whiteSpace: "nowrap", zIndex: 2 }}>
+        <div style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)", maxWidth: "82%", background: "#fff", padding: "8px 14px", borderRadius: 16, fontFamily: "var(--font-body)", fontWeight: 800, fontSize: "var(--text-sm)", color: "var(--text-strong)", boxShadow: "var(--shadow-sm)", whiteSpace: "normal", textAlign: "center", lineHeight: 1.35, zIndex: 2 }}>
           {state.bubble}
           <span style={{ position: "absolute", bottom: -7, left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "8px solid #fff" }} />
         </div>
@@ -33,7 +33,7 @@ export function WeatherScene({ state, height = 236 }: WeatherSceneProps) {
       <div style={{ position: "absolute", left: "50%", bottom: 6, transform: "translateX(-50%)", animation: "sway 3s ease-in-out infinite" }}>
         <CorgiMascot stage="adult" condition={state.mood} size={Math.min(170, height * 0.74)} />
       </div>
-      <div style={{ position: "absolute", top: 12, right: 12, display: "flex", gap: 3, zIndex: 2 }}>
+      <div style={{ position: "absolute", bottom: 10, left: 12, display: "flex", gap: 3, zIndex: 2 }}>
         {[0, 1, 2, 3].map((i) => (
           <span key={i} style={{ fontSize: 15, opacity: i < state.level ? 1 : 0.28, filter: i < state.level ? "none" : "grayscale(1)" }}>💧</span>
         ))}
