@@ -74,10 +74,13 @@ export function LifeCorgi(p: LifeCorgiProps) {
     if (eyeK === "happy")
       return <path d={`M${cx - 12} 154 Q${cx} 138 ${cx + 12} 154`} fill="none" stroke={DARK} strokeWidth="6" strokeLinecap="round" />;
     if (eyeK === "sleepy")
+      // 眠そうでも「真っ黒」にしない：元のまん丸の黒目＋白いハイライトを残し、
+      // 上まぶたの細いラインだけで眠たげな雰囲気を出す。
       return (
         <g>
-          <ellipse cx={cx} cy="152" rx={13 * par.eyeSize} ry={8 * par.eyeSize} fill={DARK} />
-          <path d={`M${cx - 14} 146 Q${cx} 140 ${cx + 14} 146`} fill="none" stroke={DARK} strokeWidth="5" strokeLinecap="round" />
+          <ellipse cx={cx} cy="151" rx={13 * par.eyeSize} ry={13 * par.eyeSize} fill={DARK} />
+          <circle cx={cx + 4} cy={145} r={4.2 * par.eyeSize} fill="#fff" />
+          <path d={`M${cx - 15} 142 Q${cx} 137 ${cx + 15} 142`} fill="none" stroke={OL} strokeWidth="5" strokeLinecap="round" />
         </g>
       );
     return (
