@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../design-system/Button";
 import { BottomNav } from "../../design-system/BottomNav";
 import { Card } from "../../design-system/Card";
-import { CorgiRoom } from "../../design-system/CorgiRoom";
 import { Hero } from "./Hero";
 import { BalanceCard } from "./BalanceCard";
 import { RecordSheet } from "./RecordSheet";
@@ -12,8 +11,17 @@ import { DailyFeedCard } from "./DailyFeedCard";
 import { FeastCelebration } from "./FeastCelebration";
 import { loadData, saveData } from "./logic/persistence";
 import type { TrackerData } from "./logic/persistence";
-import { canFeedToday, feedStreak, peakOf, pickFood, xpInLevel, xpLevel } from "./logic/feast";
+import { canFeedToday, crashState, feedStreak, peakOf, pickFood, xpInLevel, xpLevel } from "./logic/feast";
 import type { Food } from "./logic/feast";
+import { roomLevelFromAmount } from "./logic/roomStages";
+// ---- 生きているコーギー レイヤー ----
+import { CompanionStage } from "../life/CompanionStage";
+import type { ValueDelta } from "../life/CompanionStage";
+import { beginVisit, loadLife, saveLife } from "../life/lifeState";
+import { Onboarding } from "../life/Onboarding";
+import { DiaryScreen } from "../life/DiaryScreen";
+import { SettingsScreen } from "../life/SettingsScreen";
+import { DebugPanel, isDebug } from "../life/DebugPanel";
 
 type SheetKind = "record" | "import" | null;
 
@@ -24,6 +32,21 @@ interface FeastFx {
 
 export function App() {
   const [data, setData] = useState<TrackerData>(loadData);
+  // 来訪処理＋前回訪問からの評価額の変化を、初回レンダリング時に一度だけ計算する
+  const [init] = useState(() => {
+    let l = beginVisit(loadLife());
+    const curVal = data.records.length ? data.records[data.records.length - 1].value : null;
+    let delta: ValueDelta | null = null;
+    if (curVal != null) {
+      if (l.lastSeenValue != null && l.lastSeenValue > 0 && curVal !== l.lastSeenValue) {
+        const pct = (curVal - l.lastSeenValue) / l.lastSeenValue;
+        delta = { pct, dir: pct > 0.0005 ? "up" : pct < -0.0005 ? "down" : "flat" };
+      }
+      l = { ...l, lastSeenValue: curVal, today: { ...l.today, market: delta ? delta.dir : l.today.market } };
+    }
+    return { life: l, delta };
+  });
+  const [life, setLife] = useState(init.life);
   const [tab, setTab] = useState("home");
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [feastFx, setFeastFx] = useState<FeastFx | null>(null);
@@ -33,6 +56,11 @@ export function App() {
   const streak = feedStreak(data.feasts);
 
   useEffect(() => { saveData(data); }, [data]);
+  useEffect(() => { saveLife(life); }, [life]);
+
+  // アニメーション強度：設定があればそれ、なければ端末の「視差効果を減らす」に従う
+  const prm = useMemo(() => typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches, []);
+  const animLevel = life.animLevel ?? (prm ? "min" : "full");
 
   const addRecord = ({ principal, value }: { principal: number | null; value: number }) => {
     setData((d) => {
@@ -58,9 +86,22 @@ export function App() {
   };
 
   const lvl = xpLevel(data.xp);
+  const roomLv = cur ? roomLevelFromAmount(cur.principal) : 1;
+  const crash = cur ? crashState(cur.value, peak) : null;
+
+  const stage = (
+    <CompanionStage
+      life={life} setLife={setLife}
+      level={roomLv}
+      crash={crash && crash.level >= 1 ? crash : null}
+      valueDelta={init.delta}
+      animLevel={animLevel}
+      height={252}
+    />
+  );
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "var(--surface-app)", display: "flex", flexDirection: "column" }}>
+    <div className={life.animLevel == null ? "anim-auto" : undefined} style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "var(--surface-app)", display: "flex", flexDirection: "column" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(12px + env(safe-area-inset-top,0px)) 20px 12px" }}>
         <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-2xl)", color: "var(--text-strong)" }}>オルックス</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-brand)", fontWeight: 800 }}>
@@ -73,17 +114,14 @@ export function App() {
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {cur ? (
               <>
-                <Hero cur={cur} peak={peak} />
+                <Hero cur={cur} peak={peak} scene={stage} />
                 <DailyFeedCard canFeed={canFeed} streak={streak} onFeed={feed} />
                 <BalanceCard cur={cur} />
               </>
             ) : (
               <>
                 <Card tone="fur" elevation="md" padding="14px" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <CorgiRoom amount={0} height={236} />
-                  <div style={{ textAlign: "center", fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>
-                    はじめまして ワン！
-                  </div>
+                  {stage}
                   <div style={{ textAlign: "center", fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", lineHeight: 1.6 }}>
                     まだ記録がありません。<br />「記録する」か「取り込む」で、最初の金額を入力してね 🐾
                   </div>
@@ -117,16 +155,22 @@ export function App() {
           </div>
         )}
         {tab === "history" && <HistoryScreen data={data} />}
+        {tab === "diary" && <DiaryScreen life={life} records={data.records} />}
+        {tab === "settings" && <SettingsScreen life={life} setLife={setLife} />}
       </main>
 
       <BottomNav value={tab} onChange={setTab} items={[
         { key: "home", label: "ホーム", icon: "ph ph-house" },
         { key: "history", label: "きろく", icon: "ph ph-chart-line-up" },
+        { key: "diary", label: "にっき", icon: "ph ph-book-open-text" },
+        { key: "settings", label: "せってい", icon: "ph ph-gear" },
       ]} />
 
       {sheet === "record" && <RecordSheet cur={cur} onClose={() => setSheet(null)} onSave={addRecord} />}
       {sheet === "import" && <ImportSheet onClose={() => setSheet(null)} onSave={addRecord} />}
       {feastFx && <FeastCelebration {...feastFx} onDone={() => setFeastFx(null)} />}
+      {!life.onboarded && <Onboarding onDone={(name) => setLife((s) => ({ ...s, name, onboarded: true }))} />}
+      {isDebug() && <DebugPanel life={life} setLife={setLife} />}
     </div>
   );
 }

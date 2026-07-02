@@ -1,8 +1,7 @@
+import type { ReactNode } from "react";
 import { Card } from "../../design-system/Card";
 import { Badge } from "../../design-system/Badge";
-import { CorgiRoom } from "../../design-system/CorgiRoom";
 import { ProgressBar } from "../../design-system/ProgressBar";
-import { WeatherScene } from "./WeatherScene";
 import { condFor, condTone } from "./logic/conditions";
 import { crashState } from "./logic/feast";
 import { ROOM_STAGES, roomLevelFromAmount } from "./logic/roomStages";
@@ -12,9 +11,10 @@ import type { Record_ } from "./logic/persistence";
 export interface HeroProps {
   cur: Record_;
   peak: number;
+  scene: ReactNode; // 生きているコーギーの舞台（CompanionStage）
 }
 
-export function Hero({ cur, peak }: HeroProps) {
+export function Hero({ cur, peak, scene }: HeroProps) {
   const gain = cur.value - cur.principal;
   const rate = cur.principal > 0 ? (gain / cur.principal) * 100 : 0;
   const cond = condFor(rate);
@@ -34,11 +34,11 @@ export function Hero({ cur, peak }: HeroProps) {
           ? <Badge tone="negative"><i className="ph-fill ph-cloud-rain" style={{ marginRight: 3 }} />{crash.label}</Badge>
           : <Badge tone={condTone(cond.key)}>{cond.label}</Badge>}
         <span style={{ marginLeft: "auto", fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", fontWeight: 700 }}>
-          {inEvent ? `高値から ${crash.dd.toFixed(1)}%` : "タップであそぶ 🐾"}
+          なでても あそべるよ 🐾
         </span>
       </div>
 
-      {inEvent ? <WeatherScene state={crash} /> : <CorgiRoom amount={cur.principal} height={236} />}
+      {scene}
 
       <div style={{ padding: "0 4px" }}>
         <ProgressBar value={toNext} color="var(--brand)"
