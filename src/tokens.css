@@ -187,3 +187,13 @@ html, body { margin: 0; background: var(--surface-sunken); font-family: var(--fo
 @keyframes pop-in { 0% { transform: scale(0.3); opacity: 0; } 60% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
 @keyframes flash { 0%,92%,100% { opacity: 0; } 94%,97% { opacity: 0.55; } }
 @keyframes xp-fill { from { width: 0; } }
+
+/* 生きているコーギー用の keyframes */
+@keyframes twinkle { 0%,100% { opacity: 0.9; } 50% { opacity: 0.25; } }
+@keyframes zzz-float { 0% { transform: translateY(0); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(-34px); opacity: 0; } }
+@keyframes confetti-fall { 0% { transform: translateY(-12px) rotate(0); opacity: 1; } 100% { transform: translateY(300px) rotate(540deg); opacity: 0; } }
+
+/* 端末の「視差効果を減らす」設定に対応（アプリ内の CSS アニメを止める） */
+@media (prefers-reduced-motion: reduce) {
+  .anim-auto * { animation-duration: 0.01s !important; animation-iteration-count: 1 !important; }
+}
