@@ -9,6 +9,7 @@ export type Pose = "stand" | "sit" | "sleep" | "run" | "sniff" | "stretch";
 export type EyeState = "open" | "closed" | "happy" | "sleepy";
 export type MouthState = "smile" | "tongue" | "open" | "yawn" | "closed";
 export type Accessory = "none" | "nightcap" | "bandana";
+export interface OutfitItem { id: string; color: string; sub?: string }
 
 export interface LifeCorgiProps {
   level: number;        // 成長段階 1-12（体格に反映）
@@ -23,6 +24,7 @@ export interface LifeCorgiProps {
   headTilt?: number;    // 首かしげ(deg)
   lift?: number;        // ジャンプの高さ(px)。体だけ持ち上げ、影は地面に残す
   accessory?: Accessory;
+  outfit?: { collar?: OutfitItem; bandana?: OutfitItem; hat?: OutfitItem }; // 着せ替え装着中
   rainbow?: boolean;    // 虹色コーギーの日
   proud?: boolean;      // 胸を張るドヤ
   blush?: boolean;
@@ -165,13 +167,30 @@ export function LifeCorgi(p: LifeCorgiProps) {
             <path className="lc-ol" fill={creamFill} d="M204 324 q-2 22 14 22 q16 0 14 -22 z" />
           </g>
           <path className="lc-tn" d="M186 288 q8 10 14 0 q6 10 14 0" />
-          {/* バンダナは首もと（体側）に描く */}
-          {p.accessory === "bandana" && (
-            <g id={`bandana-${uid}`}>
-              <path d="M128 176 q72 34 144 0 q-8 30 -72 30 q-64 0 -72 -30 z" fill="#4E97C2" stroke={olStroke} strokeWidth="6" strokeLinejoin="round" />
-              <path d="M236 200 L258 252 L236 246 L228 204 Z" fill="#4E97C2" stroke={olStroke} strokeWidth="5" strokeLinejoin="round" />
+          {/* 首輪（装着中・首もとに巻く） */}
+          {!p.silhouette && p.outfit?.collar && (
+            <g id={`collar-${uid}`}>
+              <path d="M150 176 q50 26 100 0 q-4 16 -50 16 q-46 0 -50 -16 z" fill={p.outfit.collar.color} stroke={olStroke} strokeWidth="5" strokeLinejoin="round" />
+              <circle cx="200" cy="196" r="9" fill={p.outfit.collar.sub || "#FFF3C4"} stroke={olStroke} strokeWidth="4" />
             </g>
           )}
+          {/* バンダナ（装着 or 週末デフォルト）。装着アイテムが優先。 */}
+          {!p.silhouette && (p.outfit?.bandana || p.accessory === "bandana") && (() => {
+            const b = p.outfit?.bandana;
+            const col = b?.color || "#4E97C2";
+            const sub = b?.sub || "#fff";
+            return (
+              <g id={`bandana-${uid}`}>
+                <path d="M128 176 q72 34 144 0 q-8 30 -72 30 q-64 0 -72 -30 z" fill={col} stroke={olStroke} strokeWidth="6" strokeLinejoin="round" />
+                <path d="M236 200 L258 252 L236 246 L228 204 Z" fill={col} stroke={olStroke} strokeWidth="5" strokeLinejoin="round" />
+                {b?.id === "bandana-dot" && [160, 185, 210, 235].map((x, i) => <circle key={i} cx={x} cy={i % 2 ? 196 : 188} r="4" fill={sub} />)}
+                {b?.id === "bandana-stripe" && <g stroke={sub} strokeWidth="4"><path d="M150 186 L250 186" /><path d="M146 198 L254 198" /></g>}
+                {b?.id === "bandana-star" && <path d="M200 182 l4 9 10 1 -7 7 2 10 -9 -5 -9 5 2 -10 -7 -7 10 -1 z" fill={sub} />}
+                {b?.id === "bandana-check" && <g stroke={sub} strokeWidth="3" opacity="0.9"><path d="M175 180 L175 200" /><path d="M200 182 L200 202" /><path d="M225 180 L225 200" /><path d="M160 190 L240 190" /></g>}
+                {b?.id === "bandana-flower" && <g fill={sub}><circle cx="200" cy="192" r="5" /><circle cx="192" cy="190" r="3" /><circle cx="208" cy="190" r="3" /><circle cx="196" cy="198" r="3" /><circle cx="204" cy="198" r="3" /></g>}
+              </g>
+            );
+          })()}
         </g>
         {/* ---- 頭 ---- */}
         <g id={`head-${uid}`} transform={`${headXf} translate(200 150) scale(${0.78 + par.bodyScale * 0.22}) translate(-200 -150)`}>
@@ -196,8 +215,10 @@ export function LifeCorgi(p: LifeCorgiProps) {
             <g id={`eyes-${uid}`}><Eye cx={168} /><Eye cx={232} /></g>
           )}
           {!p.silhouette && Mouth}
-          {/* ナイトキャップ */}
-          {p.accessory === "nightcap" && (
+          {/* 帽子（装着アイテムが優先。無ければ深夜のナイトキャップ） */}
+          {!p.silhouette && p.outfit?.hat ? (
+            <g id={`hat-${uid}`}>{renderHat(p.outfit.hat, olStroke)}</g>
+          ) : p.accessory === "nightcap" && (
             <g id={`nightcap-${uid}`} transform="translate(200 62) rotate(-8)">
               <path d="M-64 10 Q-10 -66 70 -34 Q84 -28 74 -18 L64 -8 Q-6 -38 -50 18 Z" fill="#7B84C4" stroke={olStroke} strokeWidth="6" strokeLinejoin="round" />
               <path d="M-70 24 Q0 -8 72 -4 Q76 8 68 14 Q0 20 -60 36 Z" fill="#9AA3DE" stroke={olStroke} strokeWidth="6" strokeLinejoin="round" />
@@ -208,4 +229,51 @@ export function LifeCorgi(p: LifeCorgiProps) {
       </g>
     </svg>
   );
+}
+
+// 帽子アイテムの描画（頭グループ座標。頭頂は y≈60 あたり）
+function renderHat(h: OutfitItem, ol: string) {
+  const c = h.color, s = h.sub || "#7A5230";
+  switch (h.id) {
+    case "hat-straw":
+      return (
+        <g transform="translate(200 58)">
+          <ellipse cx="0" cy="6" rx="80" ry="16" fill={c} stroke={ol} strokeWidth="6" />
+          <path d="M-42 8 Q-38 -34 0 -34 Q38 -34 42 8 Z" fill={c} stroke={ol} strokeWidth="6" strokeLinejoin="round" />
+          <path d="M-42 2 Q0 12 42 2" fill="none" stroke={s} strokeWidth="6" />
+        </g>
+      );
+    case "hat-beret":
+      return (
+        <g transform="translate(200 52) rotate(-12)">
+          <ellipse cx="0" cy="0" rx="52" ry="22" fill={c} stroke={ol} strokeWidth="6" />
+          <circle cx="10" cy="-16" r="6" fill={s} stroke={ol} strokeWidth="4" />
+        </g>
+      );
+    case "hat-party":
+      return (
+        <g transform="translate(200 60)">
+          <path d="M0 -62 L34 6 L-34 6 Z" fill={c} stroke={ol} strokeWidth="6" strokeLinejoin="round" />
+          <path d="M-28 -6 Q0 4 28 -6" fill="none" stroke={s} strokeWidth="5" />
+          <circle cx="0" cy="-62" r="9" fill={s} stroke={ol} strokeWidth="4" />
+        </g>
+      );
+    case "hat-crown":
+      return (
+        <g transform="translate(200 46)">
+          <path d="M-40 14 L-40 -14 L-20 4 L0 -22 L20 4 L40 -14 L40 14 Z" fill={c} stroke={s} strokeWidth="5" strokeLinejoin="round" />
+          <circle cx="0" cy="-2" r="5" fill="#E2574C" />
+        </g>
+      );
+    case "hat-ribbon":
+      return (
+        <g transform="translate(200 62)">
+          <path d="M0 0 L-32 -15 L-32 15 Z" fill={c} stroke={ol} strokeWidth="5" strokeLinejoin="round" />
+          <path d="M0 0 L32 -15 L32 15 Z" fill={c} stroke={ol} strokeWidth="5" strokeLinejoin="round" />
+          <circle cx="0" cy="0" r="8" fill={s} stroke={ol} strokeWidth="5" />
+        </g>
+      );
+    default:
+      return null;
+  }
 }

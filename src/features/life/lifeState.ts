@@ -23,7 +23,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export interface LifeState {
   v: number;                  // スキーマバージョン
@@ -52,6 +52,11 @@ export interface LifeState {
   // ---- v2: DialogueEngine v2 ----
   usedLinesV2: { id: string; day: string }[]; // 30日重複回避（上限2,000 LRU）
   pendingTomorrow: { day: string } | null;    // 明日の予告→翌日フォローアップ
+  // ---- v3: Part B グループA（遊び） ----
+  wardrobe: { collar: string | null; bandana: string | null; hat: string | null }; // 着せ替え装着中
+  ballBestCombo: number;                 // ボール連続キャッチの最高記録
+  trickMastery: Record<string, number>;  // 芸ごとの成功回数（習熟度）
+  lastBrushDay: string | null;           // ブラッシングでなつき度+1した最後の日
 }
 
 const KEY = "oruduck_life_v1";
@@ -70,6 +75,8 @@ export function defaultLife(): LifeState {
     rareRolledDay: null, todayRare: null,
     memories: [], usedLines: [], animLevel: null,
     usedLinesV2: [], pendingTomorrow: null,
+    wardrobe: { collar: null, bandana: null, hat: null },
+    ballBestCombo: 0, trickMastery: {}, lastBrushDay: null,
   };
 }
 

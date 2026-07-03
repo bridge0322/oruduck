@@ -8,6 +8,8 @@ import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngi
 import { affectionLvOf, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
 import type { DialogueContext } from "./dialogueEngineV2";
 import { feat } from "./features";
+import { itemById } from "./dressup";
+import { ClosetSheet } from "./ClosetSheet";
 import { dayKey, diffDays, isFullMoon, isWeekend, monthKey, timeSlot, tokyoTime } from "./time";
 import type { CrashState } from "../tracker/logic/feast";
 
@@ -82,6 +84,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const [bubble, setBubble] = useState<{ text: string; until: number } | null>(null);
   const [hearts, setHearts] = useState<Heart[]>([]);
   const [confetti, setConfetti] = useState(false);
+  const [closet, setCloset] = useState(false);
   const heartId = useRef(0);
   const lifeRef = useRef(life);
   lifeRef.current = life;
@@ -528,6 +531,22 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (!bubbleActive() && Math.random() < 0.5) sayIdle(3600);
   };
 
+  // ---- 着せ替え ----
+  const wd = life.wardrobe || { collar: null, bandana: null, hat: null };
+  const toOutfit = (id: string | null) => {
+    const it = itemById(id);
+    return it ? { id: it.id, color: it.color, sub: it.sub } : undefined;
+  };
+  const outfit = { collar: toOutfit(wd.collar), bandana: toOutfit(wd.bandana), hat: toOutfit(wd.hat) };
+  // 装着したら「にあう？」とその場で一回転
+  const celebrateOutfit = () => {
+    const an = a.current;
+    if (an.fsm === "sleep") { an.fsm = "idle"; an.fsmT = 0; }
+    an.fsm = "tailChase"; an.fsmT = 0; an.fsmDur = 1.3; an.spin = 0;
+    an.lastInteract = an.t;
+    setBubble({ text: "にあう？", until: an.t + 2.6 });
+  };
+
   // ---- おやつ ----
   const left = treatsLeft(life);
   const giveTreat = () => {
@@ -667,7 +686,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
             earTwitchL={an.earLT > 0 ? Math.sin(an.t * 40) * 8 : 0}
             earDown={an.earDownUntil > an.t}
             lift={an.lift}
-            accessory={accessory} rainbow={rainbow}
+            accessory={accessory} outfit={outfit} rainbow={rainbow}
             proud={an.proudUntil > an.t} blush={petting}
             silhouette={moonActive}
             headTilt={an.fsm === "hug" ? 6 : 0}
@@ -729,6 +748,22 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         <div style={{ position: "absolute", bottom: 10, left: 10, display: "flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.72)", borderRadius: 999, padding: "3px 8px", zIndex: 6, fontSize: 11, fontFamily: "var(--font-body)", fontWeight: 700, color: "var(--text-muted)" }}>
           {crash.label} {crash.dd.toFixed(1)}%
         </div>
+      )}
+
+      {/* きせかえボタン（左上・控えめ） */}
+      {feat("dressUp") && (
+        <button type="button" onClick={() => setCloset(true)} aria-label="きせかえ"
+          style={{ position: "absolute", top: 8, left: 8, width: 40, height: 40, borderRadius: "50%", border: "2px solid #F0E0C8", background: "rgba(255,255,255,0.85)", fontSize: 20, cursor: "pointer", boxShadow: "var(--shadow-sm)", zIndex: 6, WebkitTapHighlightColor: "transparent" }}>
+          👕
+        </button>
+      )}
+
+      {closet && (
+        <ClosetSheet
+          life={life} setLife={setLife}
+          onClose={() => setCloset(false)}
+          onWear={celebrateOutfit}
+        />
       )}
     </div>
   );
