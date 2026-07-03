@@ -4,10 +4,12 @@
 //  market 120 / affection 160 / weather 100 / murmurs 120 / reactions 200 /
 //  streaks 100 / sleeptalk 60 / tomorrow 60 / rare 40
 import { greetings } from "./greetings";
+import { weekdays } from "./weekdays";
 import type { Line } from "./types";
 
 export const ALL_LINES: Line[] = [
   ...greetings,
+  ...weekdays,
 ];
 
 // カテゴリごとの本数（デバッグ表示・検品用）
