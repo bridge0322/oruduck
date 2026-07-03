@@ -17,6 +17,7 @@ import { moodMeta, todayMood } from "./mood";
 import type { MoodKind, WeatherKind } from "./dialogues/types";
 import type { VisitorKind } from "./lifeState";
 import { cachedWeather, fetchWeather } from "./weatherApi";
+import { configureSound, playSound } from "./sound";
 import { dayKey, diffDays, isFullMoon, isWeekend, monthKey, timeSlot, tokyoTime } from "./time";
 import type { CrashState } from "../tracker/logic/feast";
 
@@ -153,6 +154,9 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     window.addEventListener("resize", ro);
     return () => window.removeEventListener("resize", ro);
   }, []);
+
+  // サウンド設定を反映
+  useEffect(() => { configureSound(feat("sound") && !!life.soundOn, life.soundVol ?? 0.5); }, [life.soundOn, life.soundVol]);
 
   // 天気を取得（1時間キャッシュ・失敗時は前回値/晴れ）
   useEffect(() => {
@@ -500,6 +504,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         if (an.fsmT >= an.fsmDur) { an.fsm = "idle"; an.fsmT = 0; }
         break;
       case "sleep":
+        if (Math.random() < dt * 0.28) playSound("snore"); // すーすー寝息（音ON時のみ）
         // 寝言：30秒ごとに20%抽選で小さく薄く表示（本音セリフはrareで低確率）
         if (feat("sleeptalk") && !isMin) {
           if (an.sleepTalkNext === 0) an.sleepTalkNext = an.t + 22;
@@ -516,7 +521,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         if (an.bone) {
           an.bone.t += dt;
           if (an.bone.t >= 0.42 && an.lift === 0 && an.liftV === 0) an.liftV = 200; // キャッチジャンプ
-          if (an.bone.t >= 0.6) { an.bone = null; an.fsm = "eat"; an.fsmT = 0; an.fsmDur = 1.5; }
+          if (an.bone.t >= 0.6) { an.bone = null; an.fsm = "eat"; an.fsmT = 0; an.fsmDur = 1.5; playSound("crunch"); }
         }
         break;
       case "eat":
@@ -588,7 +593,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         an.xOff += (b.x - sw / 2 - an.xOff) * Math.min(1, dt * 3.4);
         an.legPhase += dt * 3;
         if (Math.abs(dogPx - b.x) < 26) {
-          if (an.lift === 0 && an.liftV === 0) an.liftV = 150; // ジャンプキャッチ
+          if (an.lift === 0 && an.liftV === 0) { an.liftV = 150; playSound("step"); } // ジャンプキャッチ
           b.st = "carry";
         }
       } else if (b.st === "carry") {
@@ -681,6 +686,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         say("hug", undefined, 3800);
         spawnHearts(1, true);
         setLife(applyHug);
+        playSound("whine");
       }
     }, 1000);
   };
@@ -697,6 +703,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       petAccum.current = 0;
       an.petUntil = an.t + 1.0;
       spawnHearts(1 + Math.floor(Math.random() * 3), false);
+      if (Math.random() < 0.35) playSound("wag");
       const before = lifeRef.current.petTotal;
       setLife(applyPet);
       const after = before + 1;

@@ -23,7 +23,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export type VisitorKind = "cat" | "bird" | "butterfly";
 
@@ -62,6 +62,9 @@ export interface LifeState {
   // ---- v4: 遊びに来る動物 ----
   visitorRolledDay: string | null;       // 来訪動物の抽選をした日
   todayVisitor: VisitorKind | null;      // きょう来る動物
+  // ---- v5: サウンド ----
+  soundOn: boolean;                      // 効果音のON/OFF（既定OFF）
+  soundVol: number;                      // 音量 0〜1
 }
 
 const KEY = "oruduck_life_v1";
@@ -83,6 +86,7 @@ export function defaultLife(): LifeState {
     wardrobe: { collar: null, bandana: null, hat: null },
     ballBestCombo: 0, trickMastery: {}, lastBrushDay: null,
     visitorRolledDay: null, todayVisitor: null,
+    soundOn: false, soundVol: 0.5,
   };
 }
 

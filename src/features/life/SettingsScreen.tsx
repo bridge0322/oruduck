@@ -3,6 +3,9 @@ import type { Dispatch, SetStateAction } from "react";
 import { Card } from "../../design-system/Card";
 import { Button } from "../../design-system/Button";
 import { SegmentedControl } from "../../design-system/SegmentedControl";
+import { Switch } from "../../design-system/Switch";
+import { feat } from "./features";
+import { configureSound, playSound } from "./sound";
 import type { AnimLevel, LifeState } from "./lifeState";
 
 // せってい：よびな・毎月の積立日・アニメーションの強さ。
@@ -56,6 +59,26 @@ export function SettingsScreen({ life, setLife }: SettingsScreenProps) {
           ))}
         </select>
       </Card>
+
+      {feat("sound") && (
+        <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>🔊 こうかおん</div>
+            <Switch checked={!!life.soundOn} onChange={(v) => { setLife((s) => ({ ...s, soundOn: v })); configureSound(v, life.soundVol ?? 0.5); if (v) playSound("wag"); }} />
+          </div>
+          <div style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", lineHeight: 1.6 }}>
+            甘え鳴き・寝息・カリカリなどを ならすよ（きどうじは オフ）。
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, opacity: life.soundOn ? 1 : 0.45 }}>
+            <span style={{ fontSize: 14 }}>🔈</span>
+            <input type="range" min={0} max={100} value={Math.round((life.soundVol ?? 0.5) * 100)} disabled={!life.soundOn}
+              onChange={(e) => { const v = +e.target.value / 100; setLife((s) => ({ ...s, soundVol: v })); configureSound(!!life.soundOn, v); }}
+              onMouseUp={() => playSound("crunch")} onTouchEnd={() => playSound("crunch")}
+              style={{ flex: 1 }} />
+            <span style={{ fontSize: 16 }}>🔊</span>
+          </div>
+        </Card>
+      )}
 
       <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>🎞️ アニメーションの つよさ</div>

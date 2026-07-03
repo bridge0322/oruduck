@@ -37,7 +37,7 @@ export const FEATURES: Features = {
   tricks: true,
   brushing: true,
   moodSystem: true,
-  sound: false,       // 音は既定OFF（設定でON）
+  sound: true,        // サウンド機能は有効（音そのものは soundOn=false で既定OFF）
   weather: true,
   sleeptalk: true,
   visitors: true,
