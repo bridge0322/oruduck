@@ -23,8 +23,10 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
+export const SCHEMA_VERSION = 2;
+
 export interface LifeState {
-  v: 1;
+  v: number;                  // スキーマバージョン
   name: string | null;        // 呼び名（オンボーディングで設定）
   onboarded: boolean;
   bond: number;               // なつき度 0-100
@@ -45,8 +47,11 @@ export interface LifeState {
   rareRolledDay: string | null;   // レア抽選を行った日
   todayRare: RareKind | null;     // きょう当選したレア演出
   memories: Memory[];         // おもいで図鑑
-  usedLines: { id: string; day: string }[]; // セリフの重複回避用
+  usedLines: { id: string; day: string }[]; // 旧v1エンジンの重複回避用（後方互換）
   animLevel: AnimLevel | null; // null = 端末設定（prefers-reduced-motion）に従う
+  // ---- v2: DialogueEngine v2 ----
+  usedLinesV2: { id: string; day: string }[]; // 30日重複回避（上限2,000 LRU）
+  pendingTomorrow: { day: string } | null;    // 明日の予告→翌日フォローアップ
 }
 
 const KEY = "oruduck_life_v1";
@@ -57,23 +62,27 @@ const emptyDay = (day: string, bond: number): DayStats => ({
 
 export function defaultLife(): LifeState {
   return {
-    v: 1, name: null, onboarded: false,
+    v: SCHEMA_VERSION, name: null, onboarded: false,
     bond: 0, bondPetToday: 0, petTotal: 0, petThankedAt: 0, hugTotal: 0, treatTotal: 0,
     today: emptyDay(dayKey(), 0), history: [],
     visitDayCount: 0, streak: 0, lastVisitDay: null, sadReunion: false,
     lastSeenValue: null, settleDay: null, lastSettleMonth: null,
     rareRolledDay: null, todayRare: null,
     memories: [], usedLines: [], animLevel: null,
+    usedLinesV2: [], pendingTomorrow: null,
   };
+}
+
+// 旧バージョンの保存データを最新スキーマへ。欠けているフィールドは
+// defaultLife() の既定値で埋まる（スプレッドの順で d が優先されるため）。
+export function migrateLife(d: Partial<LifeState>): LifeState {
+  return { ...defaultLife(), ...d, v: SCHEMA_VERSION };
 }
 
 export function loadLife(): LifeState {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const d = JSON.parse(raw) as Partial<LifeState>;
-      return { ...defaultLife(), ...d, v: 1 };
-    }
+    if (raw) return migrateLife(JSON.parse(raw) as Partial<LifeState>);
   } catch { /* 壊れていたら初期状態から */ }
   return defaultLife();
 }

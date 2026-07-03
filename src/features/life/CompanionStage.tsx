@@ -4,8 +4,11 @@ import { LifeCorgi } from "./LifeCorgi";
 import type { Accessory, EyeState, MouthState, Pose } from "./LifeCorgi";
 import { applyHug, applyPet, applyTreat, bondLevel, treatsLeft, TREATS_PER_DAY } from "./lifeState";
 import type { LifeState, RareKind } from "./lifeState";
-import { greetingCategory, idleCategory, markUsed, pickLine } from "./dialogueEngine";
-import { dayKey, isFullMoon, isWeekend, monthKey, timeSlot, tokyoTime } from "./time";
+import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
+import { affectionLvOf, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
+import type { DialogueContext } from "./dialogueEngineV2";
+import { feat } from "./features";
+import { dayKey, diffDays, isFullMoon, isWeekend, monthKey, timeSlot, tokyoTime } from "./time";
 import type { CrashState } from "../tracker/logic/feast";
 
 // 「生きているコーギー」の舞台。単一の requestAnimationFrame ループで
@@ -96,12 +99,57 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const weekend = isWeekend();
   const isMin = animLevel === "min";
 
-  // ---- セリフを言う ----
-  const say = (cat: string, n?: number, dur = 4200) => {
-    const picked = pickLine(lifeRef.current, cat, n);
+  // 現在の文脈（V2エンジンの条件マッチング用）。気分・天気は Part B 実装後に接続。
+  const dctx = (): DialogueContext => ({
+    timeOfDay: slot, weekday: tt.dow, month: tt.mo,
+    affectionLv: affectionLvOf(lifeRef.current), streak: lifeRef.current.streak,
+    marketTrend: valueDelta ? valueDelta.dir : undefined,
+  });
+
+  const showLine = (picked: { id: string; text: string } | null, dur: number, v2: boolean) => {
     if (!picked) return;
     setBubble({ text: picked.text, until: a.current.t + dur / 1000 });
-    setLife((s) => markUsed(s, picked.id));
+    const id = picked.id;
+    setLife((s) => (v2 ? markUsedV2(s, id, today) : markUsedOld(s, id)));
+  };
+
+  // ---- セリフを言う ----
+  // V2に該当カテゴリがあれば2,050本から条件マッチで選ぶ。無ければ旧POOLへフォールバック
+  // （settle / wake / pet100 / treatDone / sadReunion / rare.* などの特殊一言）。
+  const say = (cat: string, n?: number, dur = 4200) => {
+    const useV2 = feat("dialoguesV2") && hasV2Category(cat);
+    const picked = useV2
+      ? pickV2(lifeRef.current, [cat], dctx(), { n })
+      : pickLineOld(lifeRef.current, cat, n);
+    showLine(picked, dur, useV2);
+  };
+
+  // お出迎えのあいさつ：明日の予告の消費 → さみしい再会 → 文脈に合うカテゴリを重み付き抽選。
+  const sayGreeting = (dur = 4600) => {
+    const s = lifeRef.current;
+    if (s.pendingTomorrow && diffDays(today, s.pendingTomorrow.day) >= 0) {
+      showLine(pickTomorrowFollowup(s), dur, false);
+      setLife((st) => ({ ...st, pendingTomorrow: null }));
+      return;
+    }
+    if (s.sadReunion) { say("sadReunion", undefined, dur); return; }
+    const ctx = dctx();
+    const cats = ["greet", "greet", "weekday", "season", "knowledge", "affection", "murmur"];
+    if (ctx.streak >= 2 && Math.random() < 0.3) cats.push("streak", "streak");
+    if (ctx.marketTrend && ctx.marketTrend !== "flat") cats.push("market");
+    const cat = cats[Math.floor(Math.random() * cats.length)];
+    showLine(pickV2(s, [cat], ctx), dur, true);
+  };
+
+  // 放置中のひとりごと：独り言を中心に、豆知識・なつき度・季節・天気から。
+  const sayIdle = (dur: number) => {
+    const s = lifeRef.current;
+    const ctx = dctx();
+    let cats = ["murmur", "murmur", "knowledge", "affection", "season"];
+    if (ctx.weather) cats.push("weather");
+    if (affectionLvOf(s) >= 4 && Math.random() < 0.2) cats = ["affection"];
+    const cat = cats[Math.floor(Math.random() * cats.length)];
+    showLine(pickV2(s, [cat], ctx), dur, true);
   };
 
   // ---- レア演出の抽選（1日1回） ----
@@ -150,12 +198,21 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const runEvent = (ev: string) => {
     const an = a.current;
     if (ev === "greet") {
-      const g = greetingCategory(lifeRef.current);
-      say(g.cat, g.n);
+      sayGreeting();
       if (lifeRef.current.sadReunion) setLife((s) => ({ ...s, sadReunion: false }));
       an.tailSpeedMul = 1.8; // うれしくてしっぽブンブン
       setTimeout(() => { a.current.tailSpeedMul = 1; }, 2600);
       an.queueWait = 4.6;
+      // 明日の予告（20%）：会話の最後に予告を差し込み、翌日フォローアップを予約
+      if (feat("tomorrowPreview") && !lifeRef.current.pendingTomorrow && Math.random() < 0.2) {
+        an.queue.push("tomorrowSay");
+      }
+      return;
+    }
+    if (ev === "tomorrowSay") {
+      say("tomorrow", undefined, 4800);
+      setLife((s) => ({ ...s, pendingTomorrow: { day: dayKey(Date.now() + 86400000) } }));
+      an.queueWait = 5;
       return;
     }
     if (ev === "settle") {
@@ -184,7 +241,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     }
     if (ev === "rainbowSay") { say("rare.rainbow", undefined, 5000); recordMemory("rainbow"); an.queueWait = 5.6; return; }
     if (ev === "market.up") {
-      say("proud", undefined, 5000);
+      say("market", undefined, 5000);
       an.proudUntil = an.t + 4;
       // 上昇率をしっぽの振り速度に反映（+1%で1.4倍、最大3倍）
       an.tailSpeedMul = Math.min(3, 1 + (valueDelta?.pct || 0) * 40);
@@ -196,7 +253,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       // 一瞬耳ペタン → すぐ首を振って前向きセリフ（1秒以内に切り替え）
       an.earDownUntil = an.t + 0.8;
       an.shakeUntil = an.t + 1.4;
-      setTimeout(() => say("comfort", undefined, 5200), 850);
+      setTimeout(() => say("market", undefined, 5200), 850);
       an.queueWait = 6;
       return;
     }
@@ -310,7 +367,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         // ときどきひとりごと
         if (an.t >= an.idleTalkNext) {
           an.idleTalkNext = an.t + 14 + Math.random() * 18;
-          if (Math.random() < 0.4 && !bubbleActive()) say(idleCategory(lifeRef.current), undefined, 4200);
+          if (Math.random() < 0.4 && !bubbleActive()) sayIdle(4200);
         }
         break;
       }
@@ -468,7 +525,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (performance.now() - lastPetAt.current < 600 || an.fsm === "hug") return;
     an.lastInteract = an.t;
     if (an.lift === 0 && an.liftV === 0) an.liftV = 190;
-    if (!bubbleActive() && Math.random() < 0.5) say(idleCategory(lifeRef.current), undefined, 3600);
+    if (!bubbleActive() && Math.random() < 0.5) sayIdle(3600);
   };
 
   // ---- おやつ ----
