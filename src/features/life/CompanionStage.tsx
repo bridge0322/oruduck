@@ -5,7 +5,7 @@ import type { Accessory, EyeState, MouthState, Pose } from "./LifeCorgi";
 import { applyHug, applyPet, applyTreat, bondLevel, clampBond, treatsLeft, TREATS_PER_DAY } from "./lifeState";
 import type { LifeState, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
-import { affectionLvOf, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
+import { affectionLvOf, fillVars, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
 import type { DialogueContext } from "./dialogueEngineV2";
 import { feat } from "./features";
 import { itemById } from "./dressup";
@@ -63,6 +63,7 @@ interface Anim {
   idleTalkNext: number;
   ball: { st: "fly" | "chase" | "carry"; x: number; y: number; vx: number; vy: number } | null; // ボール遊び（px座標）
   ballCombo: number;                // 連続キャッチ数
+  tug: { t: number; dur: number; phase: "pull" | "win" | "lose" } | null; // 引っ張りっこ
 }
 
 const newAnim = (skipEnter: boolean): Anim => ({
@@ -76,8 +77,12 @@ const newAnim = (skipEnter: boolean): Anim => ({
   dir: 1, xOff: 0, spin: 0, lift: 0, liftV: 0,
   bone: null, butterfly: null, twins: null, star: null, moon: null,
   queue: [], queueWait: 0, idleTalkNext: 15,
-  ball: null, ballCombo: 0,
+  ball: null, ballCombo: 0, tug: null,
 });
+
+const TUG_WIN = ["かった〜！ えっへん", "ぐいっ！ ぼくの かち！", "つよいでしょ？ ふふん", "かったワン！ どやっ", "ひっぱりっこ さいきょう！"];
+const TUG_LOSE = ["まけちゃった…くやしい", "うぐぐ、つよいなあ", "つぎは まけないぞ！", "ぬかれた〜 もういっかい！", "むむ、やるね {name}"];
+const pickTug = (r: "win" | "lose") => { const a = r === "win" ? TUG_WIN : TUG_LOSE; return a[Math.floor(Math.random() * a.length)]; };
 
 const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
 
@@ -440,8 +445,30 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         break;
     }
 
+    // 引っ張りっこ：ぐいぐい引き合い、2〜4秒でランダム勝敗
+    if (an.tug) {
+      const g = an.tug;
+      g.t += dt;
+      an.lastInteract = an.t;
+      if (g.phase === "pull") {
+        an.xOff = Math.sin(an.t * 22) * 4; // ぐいぐい踏ん張る
+        an.legPhase += dt * 4;
+        if (g.t >= g.dur) { g.phase = Math.random() < 0.5 ? "win" : "lose"; g.t = 0; }
+      } else {
+        const dirSign = g.phase === "win" ? -1 : 1; // 勝ち=のけぞる/負け=前へ引かれる
+        an.xOff += (dirSign * 22 - an.xOff) * Math.min(1, dt * 5);
+        if (g.t >= 1.0) {
+          const won = g.phase === "win";
+          an.tug = null; an.xOff = 0; an.fsm = "idle"; an.fsmT = 0;
+          if (won) { an.liftV = 130; an.proudUntil = an.t + 2.6; an.tailSpeedMul = 2; setTimeout(() => { a.current.tailSpeedMul = 1; }, 2000); }
+          else { an.earDownUntil = an.t + 1.2; }
+          setBubble({ text: fillVars(won ? pickTug("win") : pickTug("lose"), lifeRef.current), until: an.t + 3.8 });
+        }
+      }
+    }
+
     // ボール遊び：投げる→着地→犬が走って追う→ジャンプキャッチ→咥えて戻る→お座り
-    if (an.ball) {
+    if (!an.tug && an.ball) {
       const b = an.ball;
       const sw = swRef.current;
       const floorY = height - 22;
@@ -502,7 +529,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     } else if (an.moon) {
       an.moon.t += dt;
       if (an.moon.t > 5) an.moon = null;
-    } else if (!an.ball && an.fsm !== "tailChase" && an.phase === "live") {
+    } else if (!an.ball && !an.tug && an.fsm !== "tailChase" && an.phase === "live") {
       an.xOff *= Math.max(0, 1 - dt * 3);
     }
   };
@@ -650,6 +677,16 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   };
   const onBrushUp = () => { brushLastPt.current = null; };
 
+  // ---- 引っ張りっこ ----
+  const startTug = () => {
+    const an = a.current;
+    if (an.tug || an.ball) return;
+    wakeIfSleeping();
+    an.lastInteract = an.t;
+    an.tug = { t: 0, dur: 2 + Math.random() * 2, phase: "pull" };
+    setBubble({ text: "つなひき、しょうぶ！", until: an.t + 1.6 });
+  };
+
   // ---- ボール遊び（フリックで投げる） ----
   const armBall = () => {
     if (a.current.ball || ballArmed) return;
@@ -718,8 +755,12 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const sleeping = an.fsm === "sleep";
   const late = slot === "late";
 
+  // 引っ張りっこの傾き（踏ん張り／のけぞり／前のめり）
+  const tugRot = an.tug ? (an.tug.phase === "pull" ? -9 + Math.sin(an.t * 20) * 3 : an.tug.phase === "win" ? -18 : 14) : 0;
+
   let pose: Pose = "sit";
-  if (an.phase === "enter" || an.butterfly || an.fsm === "tailChase" || (an.ball && an.ball.st !== "fly")) pose = "run";
+  if (an.tug) pose = "stand";
+  else if (an.phase === "enter" || an.butterfly || an.fsm === "tailChase" || (an.ball && an.ball.st !== "fly")) pose = "run";
   else if (an.fsm === "sleep") pose = "sleep";
   else if (an.fsm === "sniff") pose = "sniff";
   else if (an.fsm === "stretch" || an.fsm === "wake") pose = "stretch";
@@ -822,7 +863,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         onClick={onDogTap}
         style={{ position: "absolute", left: "50%", bottom: 10 + yOff, width: dogW, height: dogW * 0.97, transform: `translateX(-50%) translateX(${an.xOff}px) scale(${scale}) rotate(${an.spin % 360}deg)`, transformOrigin: "50% 88%", cursor: "pointer", zIndex: 3, filter: moonActive ? "brightness(0.65)" : undefined }}
       >
-        <div style={{ width: "100%", height: "100%", transform: `scaleX(${an.dir}) rotate(${shake}deg)` }}>
+        <div style={{ width: "100%", height: "100%", transform: `scaleX(${an.dir}) rotate(${shake + tugRot}deg)` }}>
           <LifeCorgi
             level={level} pose={pose}
             legPhase={an.legPhase + an.t * (pose === "run" ? 2.4 : 0)}
@@ -908,6 +949,19 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
           style={{ position: "absolute", top: 54, left: 8, width: 40, height: 40, borderRadius: "50%", border: "2px solid " + (brushMode ? "var(--brand)" : "#F0E0C8"), background: brushMode ? "var(--brand-soft)" : "rgba(255,255,255,0.85)", fontSize: 19, cursor: "pointer", boxShadow: "var(--shadow-sm)", zIndex: 6, WebkitTapHighlightColor: "transparent" }}>
           🪮
         </button>
+      )}
+
+      {/* 引っ張りっこボタン */}
+      {feat("tugOfWar") && (
+        <button type="button" onClick={startTug} aria-label="ひっぱりっこ" disabled={!!an.tug || !!an.ball}
+          style={{ position: "absolute", top: 146, left: 8, width: 40, height: 40, borderRadius: "50%", border: "2px solid " + (an.tug ? "var(--brand)" : "#F0E0C8"), background: an.tug ? "var(--brand-soft)" : "rgba(255,255,255,0.85)", fontSize: 19, cursor: (an.tug || an.ball) ? "default" : "pointer", opacity: (an.tug || an.ball) ? 0.5 : 1, boxShadow: "var(--shadow-sm)", zIndex: 6, WebkitTapHighlightColor: "transparent" }}>
+          🪢
+        </button>
+      )}
+
+      {/* つなひきのロープ（引き合い中） */}
+      {an.tug && an.tug.phase === "pull" && (
+        <div style={{ position: "absolute", left: "50%", bottom: 30, width: 90, height: 8, background: "linear-gradient(90deg,#C77F35,#9A551C)", borderRadius: 6, transform: `translateX(calc(-50% + ${an.xOff}px)) rotate(${Math.sin(an.t * 20) * 4}deg)`, transformOrigin: "left center", zIndex: 4, pointerEvents: "none", boxShadow: "0 1px 2px rgba(0,0,0,0.2)" }} />
       )}
 
       {/* ボールボタン */}
