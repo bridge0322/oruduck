@@ -13,6 +13,8 @@ import { ClosetSheet } from "./ClosetSheet";
 import { TrickSheet } from "./TrickSheet";
 import { nextLockedTrick, totalMastery } from "./tricks";
 import type { Trick } from "./tricks";
+import { moodMeta, todayMood } from "./mood";
+import type { MoodKind } from "./dialogues/types";
 import { dayKey, diffDays, isFullMoon, isWeekend, monthKey, timeSlot, tokyoTime } from "./time";
 import type { CrashState } from "../tracker/logic/feast";
 
@@ -125,6 +127,9 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const night = tt.h >= 19 || tt.h < 5;
   const weekend = isWeekend();
   const isMin = animLevel === "min";
+  const mood: MoodKind | undefined = feat("moodSystem") ? todayMood() : undefined;
+  const moodRef = useRef(mood);
+  moodRef.current = mood;
 
   // ステージ幅を計測（ボールの放物線・犬の追走のpx計算に使う）
   useEffect(() => {
@@ -139,6 +144,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     timeOfDay: slot, weekday: tt.dow, month: tt.mo,
     affectionLv: affectionLvOf(lifeRef.current), streak: lifeRef.current.streak,
     marketTrend: valueDelta ? valueDelta.dir : undefined,
+    mood: moodRef.current,
   });
 
   const showLine = (picked: { id: string; text: string } | null, dur: number, v2: boolean) => {
@@ -170,6 +176,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (s.sadReunion) { say("sadReunion", undefined, dur); return; }
     const ctx = dctx();
     const cats = ["greet", "greet", "weekday", "season", "knowledge", "affection", "murmur"];
+    if (ctx.mood) cats.push("mood", "mood");
     if (ctx.streak >= 2 && Math.random() < 0.3) cats.push("streak", "streak");
     if (ctx.marketTrend && ctx.marketTrend !== "flat") cats.push("market");
     const cat = cats[Math.floor(Math.random() * cats.length)];
@@ -181,6 +188,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     const s = lifeRef.current;
     const ctx = dctx();
     let cats = ["murmur", "murmur", "knowledge", "affection", "season"];
+    if (ctx.mood) cats.push("mood", "mood");
     if (ctx.weather) cats.push("weather");
     if (affectionLvOf(s) >= 4 && Math.random() < 0.2) cats = ["affection"];
     const cat = cats[Math.floor(Math.random() * cats.length)];
@@ -319,7 +327,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       last = now;
       const an = a.current;
       an.t += dt;
-      an.tailPhase += dt * (4 + lifeRef.current.bond / 60) * an.tailSpeedMul * (an.fsm === "sleep" ? 0.15 : 1);
+      const moodTail = moodRef.current === "genki" ? 1.4 : moodRef.current === "mattari" ? 0.7 : 1;
+      an.tailPhase += dt * (4 + lifeRef.current.bond / 60) * an.tailSpeedMul * moodTail * (an.fsm === "sleep" ? 0.15 : 1);
 
       // 入場ダッシュ（1.2秒以内）
       if (an.phase === "enter") {
@@ -384,25 +393,36 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     an.earRT = Math.max(0, an.earRT - dt);
 
     const slow = weekend ? 0.7 : 1; // 週末はゆったり
+    // 今日の気分でアイドル挙動を変える：元気=活発/まったり=おとなしく早寝/
+    // いたずら=くるくる多め/甘えん坊=よく話しかける
+    const mk = moodRef.current;
+    const actMul = mk === "genki" ? 1.9 : mk === "mattari" ? 0.5 : mk === "itazura" ? 1.5 : 1;
+    const chaseMul = mk === "itazura" ? 3 : mk === "genki" ? 2 : mk === "mattari" ? 0.4 : 1;
+    const sleepAfter = mk === "mattari" ? 180 : mk === "genki" ? 420 : 300;
+    const talkChance = mk === "amae" ? 0.62 : mk === "mattari" ? 0.3 : 0.4;
 
     switch (an.fsm) {
       case "idle": {
-        // 1秒ごとに確率判定（10%/10s = 1%/s など）
+        // 1秒ごとに確率判定（10%/10s = 1%/s など）。気分で頻度を調整。
         secAcc.current += dt;
         if (secAcc.current >= 1) {
           secAcc.current = 0;
           const r = Math.random();
-          if (r < 0.010 * slow) { an.fsm = "earTwitch"; an.fsmT = 0; an.fsmDur = 0.7; an.earLT = 0.5; }
-          else if (r < 0.010 + 0.00167 * slow) { an.fsm = "yawn"; an.fsmT = 0; an.fsmDur = 2.4; }
-          else if (r < 0.010 + 0.00167 + 0.0005 * slow) { an.fsm = "tailChase"; an.fsmT = 0; an.fsmDur = 2.6; }
-          else if (r < 0.010 + 0.00167 + 0.0005 + 0.00267 * slow) { an.fsm = "sniff"; an.fsmT = 0; an.fsmDur = 2.4; }
+          const pTwitch = 0.010 * slow * actMul;
+          const pYawn = pTwitch + 0.00167 * slow * (mk === "mattari" ? 2 : 1);
+          const pChase = pYawn + 0.0005 * slow * chaseMul;
+          const pSniff = pChase + 0.00267 * slow * actMul;
+          if (r < pTwitch) { an.fsm = "earTwitch"; an.fsmT = 0; an.fsmDur = 0.7; an.earLT = 0.5; }
+          else if (r < pYawn) { an.fsm = "yawn"; an.fsmT = 0; an.fsmDur = 2.4; }
+          else if (r < pChase) { an.fsm = "tailChase"; an.fsmT = 0; an.fsmDur = 2.6; }
+          else if (r < pSniff) { an.fsm = "sniff"; an.fsmT = 0; an.fsmDur = 2.4; }
         }
-        // 5分さわられなかったら寝る
-        if (an.t - an.lastInteract > 300) { an.fsm = "sleep"; an.fsmT = 0; an.fsmDur = 1e9; }
-        // ときどきひとりごと
+        // 放置で寝る（まったりは早め、元気は遅め）
+        if (an.t - an.lastInteract > sleepAfter) { an.fsm = "sleep"; an.fsmT = 0; an.fsmDur = 1e9; }
+        // ときどきひとりごと（甘えん坊はよく話す）
         if (an.t >= an.idleTalkNext) {
-          an.idleTalkNext = an.t + 14 + Math.random() * 18;
-          if (Math.random() < 0.4 && !bubbleActive()) sayIdle(4200);
+          an.idleTalkNext = an.t + (mk === "amae" ? 9 : 14) + Math.random() * 16;
+          if (Math.random() < talkChance && !bubbleActive()) sayIdle(4200);
         }
         break;
       }
@@ -930,6 +950,14 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       {/* おやつのほね（ボタンからコーギーへ放物線で飛ぶ） */}
       {an.bone && (
         <div style={{ position: "absolute", right: "14%", bottom: 44, transform: `translate(${-(an.bone.t / 0.6) * 120}px, ${-Math.sin((an.bone.t / 0.6) * Math.PI) * 90}px) rotate(${an.bone.t * 600}deg)`, fontSize: 26, pointerEvents: "none", zIndex: 4 }}>🦴</div>
+      )}
+
+      {/* 今日の気分（控えめ・右上、ハートゲージの左） */}
+      {mood && (
+        <div style={{ position: "absolute", top: 10, right: 66, display: "flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.72)", borderRadius: 999, padding: "4px 8px", zIndex: 6 }}>
+          <span style={{ fontSize: 12 }}>{moodMeta(mood).emoji}</span>
+          <span style={{ fontFamily: "var(--font-body)", fontWeight: 800, fontSize: 10, color: "var(--text-brand)" }}>{moodMeta(mood).label}</span>
+        </div>
       )}
 
       {/* なつき度ハートゲージ（控えめ・右上） */}

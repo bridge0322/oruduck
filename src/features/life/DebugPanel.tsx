@@ -4,6 +4,8 @@ import { timeOverride } from "./time";
 import { clampBond } from "./lifeState";
 import type { LifeState } from "./lifeState";
 import { poolSize } from "./dialogues";
+import { setMoodOverride } from "./mood";
+import type { MoodKind } from "./dialogues/types";
 
 // ?debug=1 のときだけ出る開発用パネル。
 // 時間帯の強制・レア演出の強制発火・なつき度の変更・各種リセットができる。
@@ -56,6 +58,16 @@ export function DebugPanel({ life, setLife }: DebugPanelProps) {
         <button type="button" style={btn} onClick={() => setHour(21)}>夜21時</button>
         <button type="button" style={btn} onClick={() => setHour(1)}>深夜1時</button>
         <span style={{ fontSize: 10 }}>now: {timeOverride.hour ?? "real"}</span>
+      </div>
+
+      <div style={row}>
+        <span style={label}>今日の気分（強制）</span>
+        <button type="button" style={btn} onClick={() => { setMoodOverride(null); fire({}); }}>自動</button>
+        {(["genki", "mattari", "amae", "itazura"] as MoodKind[]).map((m) => (
+          <button key={m} type="button" style={btn} onClick={() => { setMoodOverride(m); fire({}); }}>
+            {m === "genki" ? "元気" : m === "mattari" ? "まったり" : m === "amae" ? "甘え" : "いたずら"}
+          </button>
+        ))}
       </div>
 
       <div style={row}>
