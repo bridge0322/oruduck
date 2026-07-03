@@ -11,6 +11,11 @@ import { knowledge } from "./knowledge";
 import { market } from "./market";
 import { affection } from "./affection";
 import { weather } from "./weather";
+import { murmurs } from "./murmurs";
+import { streaks } from "./streaks";
+import { sleeptalk } from "./sleeptalk";
+import { tomorrow } from "./tomorrow";
+import { rare } from "./rare";
 import type { Line } from "./types";
 
 export const ALL_LINES: Line[] = [
@@ -22,6 +27,11 @@ export const ALL_LINES: Line[] = [
   ...market,
   ...affection,
   ...weather,
+  ...murmurs,
+  ...streaks,
+  ...sleeptalk,
+  ...tomorrow,
+  ...rare,
 ];
 
 // カテゴリごとの本数（デバッグ表示・検品用）
