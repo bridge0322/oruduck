@@ -69,6 +69,7 @@ interface Anim {
   ball: { st: "fly" | "chase" | "carry"; x: number; y: number; vx: number; vy: number } | null; // ボール遊び（px座標）
   ballCombo: number;                // 連続キャッチ数
   tug: { t: number; dur: number; phase: "pull" | "win" | "lose" } | null; // 引っ張りっこ
+  sleepTalkNext: number;            // 次の寝言判定時刻（0=未設定）
 }
 
 const newAnim = (skipEnter: boolean): Anim => ({
@@ -82,7 +83,7 @@ const newAnim = (skipEnter: boolean): Anim => ({
   dir: 1, xOff: 0, spin: 0, lift: 0, liftV: 0,
   bone: null, butterfly: null, twins: null, star: null, moon: null,
   queue: [], queueWait: 0, idleTalkNext: 15,
-  ball: null, ballCombo: 0, tug: null,
+  ball: null, ballCombo: 0, tug: null, sleepTalkNext: 0,
 });
 
 const TUG_WIN = ["かった〜！ えっへん", "ぐいっ！ ぼくの かち！", "つよいでしょ？ ふふん", "かったワン！ どやっ", "ひっぱりっこ さいきょう！"];
@@ -94,7 +95,7 @@ const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
 export function CompanionStage({ life, setLife, level, crash, valueDelta, animLevel, height = 280 }: CompanionStageProps) {
   const a = useRef<Anim>(newAnim(animLevel === "min"));
   const [, setTick] = useState(0);
-  const [bubble, setBubble] = useState<{ text: string; until: number } | null>(null);
+  const [bubble, setBubble] = useState<{ text: string; until: number; soft?: boolean } | null>(null);
   const [hearts, setHearts] = useState<Heart[]>([]);
   const [confetti, setConfetti] = useState(false);
   const [closet, setCloset] = useState(false);
@@ -445,6 +446,17 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         if (an.fsmT >= an.fsmDur) { an.fsm = "idle"; an.fsmT = 0; }
         break;
       case "sleep":
+        // 寝言：30秒ごとに20%抽選で小さく薄く表示（本音セリフはrareで低確率）
+        if (feat("sleeptalk") && !isMin) {
+          if (an.sleepTalkNext === 0) an.sleepTalkNext = an.t + 22;
+          if (an.t >= an.sleepTalkNext) {
+            an.sleepTalkNext = an.t + 30;
+            if (Math.random() < 0.2 && !bubbleActive()) {
+              const p = pickV2(lifeRef.current, ["sleeptalk"], dctx());
+              if (p) { setBubble({ text: p.text, until: an.t + 3.6, soft: true }); setLife((s) => markUsedV2(s, p.id, today)); }
+            }
+          }
+        }
         break; // タップで起こすまで寝る
       case "catch":
         if (an.bone) {
@@ -580,7 +592,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     const an = a.current;
     an.lastInteract = an.t;
     if (an.fsm === "sleep") {
-      an.fsm = "wake"; an.fsmT = 0; an.fsmDur = 1.3;
+      an.fsm = "wake"; an.fsmT = 0; an.fsmDur = 1.3; an.sleepTalkNext = 0;
       say("wake", undefined, 3600);
       return true;
     }
@@ -901,9 +913,9 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
 
       {/* 吹き出し */}
       {bubble && an.t < bubble.until && (
-        <div style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", maxWidth: "86%", background: "rgba(255,255,255,0.96)", padding: "9px 15px", borderRadius: 18, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "var(--text-sm)", color: "var(--text-strong)", boxShadow: "var(--shadow-sm)", textAlign: "center", lineHeight: 1.45, zIndex: 6, animation: "pop-in .3s var(--ease-bounce)" }}>
+        <div style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", maxWidth: "86%", background: bubble.soft ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.96)", padding: bubble.soft ? "7px 13px" : "9px 15px", borderRadius: 18, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: bubble.soft ? "var(--text-xs)" : "var(--text-sm)", color: bubble.soft ? "var(--text-muted)" : "var(--text-strong)", boxShadow: "var(--shadow-sm)", textAlign: "center", lineHeight: 1.45, zIndex: 6, animation: "pop-in .3s var(--ease-bounce)", opacity: bubble.soft ? 0.85 : 1 }}>
           {bubble.text}
-          <span style={{ position: "absolute", bottom: -7, left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "8px solid rgba(255,255,255,0.96)" }} />
+          <span style={{ position: "absolute", bottom: -7, left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: `8px solid ${bubble.soft ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.96)"}` }} />
         </div>
       )}
 
