@@ -10,6 +10,9 @@ import type { DialogueContext } from "./dialogueEngineV2";
 import { feat } from "./features";
 import { itemById } from "./dressup";
 import { ClosetSheet } from "./ClosetSheet";
+import { TrickSheet } from "./TrickSheet";
+import { nextLockedTrick, totalMastery } from "./tricks";
+import type { Trick } from "./tricks";
 import { dayKey, diffDays, isFullMoon, isWeekend, monthKey, timeSlot, tokyoTime } from "./time";
 import type { CrashState } from "../tracker/logic/feast";
 
@@ -94,6 +97,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const [confetti, setConfetti] = useState(false);
   const [closet, setCloset] = useState(false);
   const [brushMode, setBrushMode] = useState(false);
+  const [tricks, setTricks] = useState(false);
+  const [trickToast, setTrickToast] = useState<string | null>(null);
   const [furs, setFurs] = useState<{ id: number; x: number; y: number }[]>([]);
   const [brushCount, setBrushCount] = useState(0);
   const brushLastPt = useRef<{ x: number; y: number } | null>(null);
@@ -677,6 +682,30 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   };
   const onBrushUp = () => { brushLastPt.current = null; };
 
+  // ---- 芸を教える ----
+  const doTrick = (t: Trick) => {
+    const an = a.current;
+    if (an.fsm === "sleep") { an.fsm = "idle"; an.fsmT = 0; }
+    an.lastInteract = an.t;
+    setBubble({ text: t.line, until: an.t + 3.6 });
+    if (t.motion === "jump") { if (an.lift === 0 && an.liftV === 0) an.liftV = 150; }
+    else if (t.motion === "sit") { an.fsm = "idle"; an.fsmT = 0; }
+    else if (t.motion === "wait") { an.fsm = "idle"; an.fsmT = 0; an.blinkUntil = an.t + 0.2; }
+    else if (t.motion === "bang") { an.fsm = "sleep"; an.fsmT = 0; an.fsmDur = 1e9; setTimeout(() => { if (a.current.fsm === "sleep") { a.current.fsm = "wake"; a.current.fsmT = 0; a.current.fsmDur = 1.2; } }, 1500); }
+    setLife((s) => {
+      const m = { ...(s.trickMastery || {}) };
+      const before = totalMastery(m);
+      m[t.id] = (m[t.id] || 0) + 1;
+      const nextBefore = nextLockedTrick(s.trickMastery || {});
+      const nextAfter = nextLockedTrick(m);
+      if (nextBefore && nextBefore !== nextAfter && before + 1 >= nextBefore.unlockAt) {
+        setTrickToast(`あたらしい げい：「${nextBefore.name}」を おぼえた！`);
+        setTimeout(() => setTrickToast(null), 3200);
+      }
+      return { ...s, trickMastery: m };
+    });
+  };
+
   // ---- 引っ張りっこ ----
   const startTug = () => {
     const an = a.current;
@@ -949,6 +978,20 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
           style={{ position: "absolute", top: 54, left: 8, width: 40, height: 40, borderRadius: "50%", border: "2px solid " + (brushMode ? "var(--brand)" : "#F0E0C8"), background: brushMode ? "var(--brand-soft)" : "rgba(255,255,255,0.85)", fontSize: 19, cursor: "pointer", boxShadow: "var(--shadow-sm)", zIndex: 6, WebkitTapHighlightColor: "transparent" }}>
           🪮
         </button>
+      )}
+
+      {/* 芸ボタン */}
+      {feat("tricks") && (
+        <button type="button" onClick={() => setTricks(true)} aria-label="げいをおしえる"
+          style={{ position: "absolute", top: 192, left: 8, width: 40, height: 40, borderRadius: "50%", border: "2px solid #F0E0C8", background: "rgba(255,255,255,0.85)", fontSize: 19, cursor: "pointer", boxShadow: "var(--shadow-sm)", zIndex: 6, WebkitTapHighlightColor: "transparent" }}>
+          🎓
+        </button>
+      )}
+      {tricks && <TrickSheet life={life} onClose={() => setTricks(false)} onTrick={doTrick} />}
+      {trickToast && (
+        <div style={{ position: "absolute", top: "42%", left: "50%", transform: "translate(-50%,-50%)", background: "var(--brand)", color: "#fff", fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-sm)", padding: "10px 16px", borderRadius: 16, boxShadow: "var(--shadow-md)", zIndex: 8, textAlign: "center", animation: "pop-in .3s var(--ease-bounce)", pointerEvents: "none", maxWidth: "80%" }}>
+          🎉 {trickToast}
+        </div>
       )}
 
       {/* 引っ張りっこボタン */}
