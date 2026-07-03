@@ -6,12 +6,14 @@
 import { greetings } from "./greetings";
 import { weekdays } from "./weekdays";
 import { seasonal } from "./seasonal";
+import { moods } from "./moods";
 import type { Line } from "./types";
 
 export const ALL_LINES: Line[] = [
   ...greetings,
   ...weekdays,
   ...seasonal,
+  ...moods,
 ];
 
 // カテゴリごとの本数（デバッグ表示・検品用）
