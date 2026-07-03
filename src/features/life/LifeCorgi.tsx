@@ -21,6 +21,7 @@ export interface LifeCorgiProps {
   earTwitchR?: number;
   earDown?: boolean;    // 耳ペタン
   headTilt?: number;    // 首かしげ(deg)
+  lift?: number;        // ジャンプの高さ(px)。体だけ持ち上げ、影は地面に残す
   accessory?: Accessory;
   rainbow?: boolean;    // 虹色コーギーの日
   proud?: boolean;      // 胸を張るドヤ
@@ -40,10 +41,14 @@ export function LifeCorgi(p: LifeCorgiProps) {
   const sniffing = p.pose === "sniff";
   const stretching = p.pose === "stretch";
 
-  // 足：4本。run 中は前後で位相をずらしてトロット風に。
-  const amp = running ? 14 : 0;
-  const leg = (offset: number) => Math.max(0, Math.sin((p.legPhase + offset) * Math.PI * 2)) * amp;
+  // 走行時は脚を前後に振る（対角の脚が同位相のトロット）。上下の浮きではなく回転で表現。
+  const legSwing = (offset: number) => (running ? Math.sin((p.legPhase + offset) * Math.PI * 2) * 22 : 0);
+  const runBob = running ? Math.abs(Math.sin(p.legPhase * Math.PI * 2)) * 4 : 0;
   const sitDrop = sitting ? 14 : 0;
+  const lift = p.lift ?? 0;
+  // 体は中心(y=250)を基準に拡縮するので、足の接地ラインも体格で上下する。
+  // 立ち足の下端(元 y=346)を同じ変換にかけて、影をその足元に合わせる。
+  const groundY = 250 + (346 - 250) * par.bodyScale * par.bodyStretch;
 
   const tan = p.rainbow ? `url(#rb-${uid})` : TAN;
   const inner = p.rainbow ? `url(#rb-${uid})` : INNER;
@@ -136,8 +141,9 @@ export function LifeCorgi(p: LifeCorgiProps) {
           </linearGradient>
         )}
       </defs>
-      <ellipse cx="200" cy={378} rx={64 * par.bodyScale} ry={10 * par.bodyScale} fill="#000" opacity={0.12} />
-      <g transform={`${bodyXf} translate(200 250) scale(0.86 1) translate(-200 -250)`}>
+      {/* 影は地面に固定（足元に密着）。ジャンプで体が上がるほど小さく薄くする */}
+      <ellipse cx="200" cy={groundY + 8} rx={(56 - Math.min(40, lift) * 0.4) * par.bodyScale} ry={9 * par.bodyScale} fill="#000" opacity={Math.max(0.05, 0.14 - lift * 0.002)} />
+      <g transform={`translate(0 ${-lift - runBob}) ${bodyXf} translate(200 250) scale(0.86 1) translate(-200 -250)`}>
         {/* ---- 胴体 ---- */}
         <g id={`body-${uid}`} transform={`translate(0 ${sitDrop}) translate(200 250) scale(${par.bodyScale} ${par.bodyScale * par.bodyStretch}) translate(-200 -250)`}>
           {/* しっぽ */}
@@ -146,15 +152,15 @@ export function LifeCorgi(p: LifeCorgiProps) {
           </g>
           <path className="lc-ol" fill={bodyFill} d="M200 150 C150 150 120 185 120 245 C120 312 150 348 200 348 C250 348 280 312 280 245 C280 185 250 150 200 150 Z" />
           <path fill={creamFill} d="M200 198 C176 198 162 222 162 264 C162 314 180 340 200 340 C220 340 238 314 238 264 C238 222 224 198 200 198 Z" />
-          {/* 後足（run で前後逆位相） */}
+          {/* 後足（対角トロット：後左は前右と、後右は前左と同位相） */}
           <g id={`legBack-${uid}`} transform={`translate(0 ${-sitDrop})`} opacity={sitting || sleeping ? 0 : 1}>
-            <path className="lc-ol" fill={creamFill} d={`M140 ${324 - leg(0.25)} q-2 22 14 22 q16 0 14 -22 z`} />
-            <path className="lc-ol" fill={creamFill} d={`M232 ${324 - leg(0.75)} q-2 22 14 22 q16 0 14 -22 z`} />
+            <g transform={`rotate(${legSwing(0.5)} 146 326)`}><path className="lc-ol" fill={creamFill} d="M140 324 q-2 22 14 22 q16 0 14 -22 z" /></g>
+            <g transform={`rotate(${legSwing(0)} 238 326)`}><path className="lc-ol" fill={creamFill} d="M232 324 q-2 22 14 22 q16 0 14 -22 z" /></g>
           </g>
-          {/* 前足 */}
+          {/* 前足（対角トロット） */}
           <g id={`legFront-${uid}`} transform={`translate(0 ${-sitDrop})`} opacity={sleeping ? 0 : 1}>
-            <path className="lc-ol" fill={creamFill} d={`M168 ${324 - leg(0)} q-2 22 14 22 q16 0 14 -22 z`} />
-            <path className="lc-ol" fill={creamFill} d={`M204 ${324 - leg(0.5)} q-2 22 14 22 q16 0 14 -22 z`} />
+            <g transform={`rotate(${legSwing(0)} 174 326)`}><path className="lc-ol" fill={creamFill} d="M168 324 q-2 22 14 22 q16 0 14 -22 z" /></g>
+            <g transform={`rotate(${legSwing(0.5)} 210 326)`}><path className="lc-ol" fill={creamFill} d="M204 324 q-2 22 14 22 q16 0 14 -22 z" /></g>
           </g>
           <path className="lc-tn" d="M186 288 q8 10 14 0 q6 10 14 0" />
           {/* バンダナは首もと（体側）に描く */}

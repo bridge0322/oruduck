@@ -12,7 +12,7 @@ const RARE_META: Record<RareKind, { emoji: string; label: string }> = {
   star: { emoji: "🌠", label: "ながれぼしに おねがい" },
   twins: { emoji: "🐶", label: "ふたごの おともだち" },
   moon: { emoji: "🌕", label: "まんげつの とおぼえ" },
-  rainbow: { emoji: "🌈", label: "にじいろコーギーの ひ" },
+  rainbow: { emoji: "🌈", label: "にじいろダックスフンドの ひ" },
 };
 
 export interface DiaryScreenProps {
@@ -88,7 +88,7 @@ export function DiaryScreen({ life, records }: DiaryScreenProps) {
           {sum.assetNote}
         </div>
         <div style={{ marginTop: 10, textAlign: "right", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
-          あなたの コーギーより 🐕
+          あなたの ダックスフンドより 🐕
         </div>
       </Card>
 

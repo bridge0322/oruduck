@@ -31,7 +31,7 @@ export function SettingsScreen({ life, setLife }: SettingsScreenProps) {
       <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>🐶 よびな</div>
         <div style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", lineHeight: 1.6 }}>
-          コーギーが よぶ なまえ。「ちゃん」は かってに つくよ。
+          ダックスフンドが よぶ なまえ。「ちゃん」は かってに つくよ。
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="れい：ゆうり" maxLength={10}
@@ -43,7 +43,7 @@ export function SettingsScreen({ life, setLife }: SettingsScreenProps) {
       <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>🎉 まいつきの つみたて日</div>
         <div style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", lineHeight: 1.6 }}>
-          この日に ひらくと、コーギーが おいわい してくれるよ。
+          この日に ひらくと、ダックスフンドが おいわい してくれるよ。
         </div>
         <select
           value={life.settleDay ?? ""}

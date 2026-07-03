@@ -600,7 +600,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       {/* コーギー本体 */}
       <div
         onClick={onDogTap}
-        style={{ position: "absolute", left: "50%", bottom: 10 + yOff + an.lift, width: dogW, height: dogW * 0.97, transform: `translateX(-50%) translateX(${an.xOff}px) scale(${scale}) rotate(${an.spin % 360}deg)`, transformOrigin: "50% 88%", cursor: "pointer", zIndex: 3, filter: moonActive ? "brightness(0.65)" : undefined }}
+        style={{ position: "absolute", left: "50%", bottom: 10 + yOff, width: dogW, height: dogW * 0.97, transform: `translateX(-50%) translateX(${an.xOff}px) scale(${scale}) rotate(${an.spin % 360}deg)`, transformOrigin: "50% 88%", cursor: "pointer", zIndex: 3, filter: moonActive ? "brightness(0.65)" : undefined }}
       >
         <div style={{ width: "100%", height: "100%", transform: `scaleX(${an.dir}) rotate(${shake}deg)` }}>
           <LifeCorgi
@@ -609,6 +609,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
             tailWag={tailWag} eyes={eyes} mouth={mouth}
             earTwitchL={an.earLT > 0 ? Math.sin(an.t * 40) * 8 : 0}
             earDown={an.earDownUntil > an.t}
+            lift={an.lift}
             accessory={accessory} rainbow={rainbow}
             proud={an.proudUntil > an.t} blush={petting}
             silhouette={moonActive}
