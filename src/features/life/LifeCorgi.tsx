@@ -41,9 +41,11 @@ export function LifeCorgi(p: LifeCorgiProps) {
   const sniffing = p.pose === "sniff";
   const stretching = p.pose === "stretch";
 
-  // 走行時は脚を前後に振る（対角の脚が同位相のトロット）。上下の浮きではなく回転で表現。
-  const legSwing = (offset: number) => (running ? Math.sin((p.legPhase + offset) * Math.PI * 2) * 22 : 0);
-  const runBob = running ? Math.abs(Math.sin(p.legPhase * Math.PI * 2)) * 4 : 0;
+  // 入場ダッシュは正面からの構図。脚を左右に振ると開脚して不自然なので、
+  // 体を上下に弾ませ、4本の脚をそろえて「着地で伸び・空中で縮む」バウンド走りにする。
+  const bound = running ? Math.sin(p.legPhase * Math.PI * 2) * 0.5 + 0.5 : 0; // 0=着地 1=空中
+  const runBob = bound * 9;   // 体の弾み（空中で上がる）
+  const legTuck = bound * 9;  // 脚の縮み（空中で足をしまう）
   const sitDrop = sitting ? 14 : 0;
   const lift = p.lift ?? 0;
   // 体は中心(y=250)を基準に拡縮するので、足の接地ラインも体格で上下する。
@@ -152,15 +154,15 @@ export function LifeCorgi(p: LifeCorgiProps) {
           </g>
           <path className="lc-ol" fill={bodyFill} d="M200 150 C150 150 120 185 120 245 C120 312 150 348 200 348 C250 348 280 312 280 245 C280 185 250 150 200 150 Z" />
           <path fill={creamFill} d="M200 198 C176 198 162 222 162 264 C162 314 180 340 200 340 C220 340 238 314 238 264 C238 222 224 198 200 198 Z" />
-          {/* 後足（対角トロット：後左は前右と、後右は前左と同位相） */}
-          <g id={`legBack-${uid}`} transform={`translate(0 ${-sitDrop})`} opacity={sitting || sleeping ? 0 : 1}>
-            <g transform={`rotate(${legSwing(0.5)} 146 326)`}><path className="lc-ol" fill={creamFill} d="M140 324 q-2 22 14 22 q16 0 14 -22 z" /></g>
-            <g transform={`rotate(${legSwing(0)} 238 326)`}><path className="lc-ol" fill={creamFill} d="M232 324 q-2 22 14 22 q16 0 14 -22 z" /></g>
+          {/* 後足（バウンド走りで上下に縮む。左右には振らない） */}
+          <g id={`legBack-${uid}`} transform={`translate(0 ${-sitDrop - legTuck})`} opacity={sitting || sleeping ? 0 : 1}>
+            <path className="lc-ol" fill={creamFill} d="M140 324 q-2 22 14 22 q16 0 14 -22 z" />
+            <path className="lc-ol" fill={creamFill} d="M232 324 q-2 22 14 22 q16 0 14 -22 z" />
           </g>
-          {/* 前足（対角トロット） */}
-          <g id={`legFront-${uid}`} transform={`translate(0 ${-sitDrop})`} opacity={sleeping ? 0 : 1}>
-            <g transform={`rotate(${legSwing(0)} 174 326)`}><path className="lc-ol" fill={creamFill} d="M168 324 q-2 22 14 22 q16 0 14 -22 z" /></g>
-            <g transform={`rotate(${legSwing(0.5)} 210 326)`}><path className="lc-ol" fill={creamFill} d="M204 324 q-2 22 14 22 q16 0 14 -22 z" /></g>
+          {/* 前足 */}
+          <g id={`legFront-${uid}`} transform={`translate(0 ${-sitDrop - legTuck})`} opacity={sleeping ? 0 : 1}>
+            <path className="lc-ol" fill={creamFill} d="M168 324 q-2 22 14 22 q16 0 14 -22 z" />
+            <path className="lc-ol" fill={creamFill} d="M204 324 q-2 22 14 22 q16 0 14 -22 z" />
           </g>
           <path className="lc-tn" d="M186 288 q8 10 14 0 q6 10 14 0" />
           {/* バンダナは首もと（体側）に描く */}
