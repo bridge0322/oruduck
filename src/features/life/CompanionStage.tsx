@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { LifeCorgi } from "./LifeCorgi";
 import type { Accessory, EyeState, MouthState, Pose } from "./LifeCorgi";
-import { applyHug, applyPet, applyTreat, bondLevel, treatsLeft, TREATS_PER_DAY } from "./lifeState";
+import { applyHug, applyPet, applyTreat, bondLevel, clampBond, treatsLeft, TREATS_PER_DAY } from "./lifeState";
 import type { LifeState, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
 import { affectionLvOf, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
@@ -85,6 +85,11 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const [hearts, setHearts] = useState<Heart[]>([]);
   const [confetti, setConfetti] = useState(false);
   const [closet, setCloset] = useState(false);
+  const [brushMode, setBrushMode] = useState(false);
+  const [furs, setFurs] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [brushCount, setBrushCount] = useState(0);
+  const brushLastPt = useRef<{ x: number; y: number } | null>(null);
+  const furId = useRef(0);
   const heartId = useRef(0);
   const lifeRef = useRef(life);
   lifeRef.current = life;
@@ -547,6 +552,44 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     setBubble({ text: "にあう？", until: an.t + 2.6 });
   };
 
+  // ---- ブラッシング ----
+  // ブラシモード中に犬をこするたび毛パーティクルが舞う。20ストロークで
+  // うっとり顔＋なつき度+1（1日1回まで）。
+  const spawnFur = (xp: number, yp: number) => {
+    if (isMin) return;
+    const id = ++furId.current;
+    setFurs((f) => [...f.slice(-14), { id, x: xp, y: yp }]);
+    setTimeout(() => setFurs((f) => f.filter((x) => x.id !== id)), 900);
+  };
+  const onBrushMove = (e: React.PointerEvent) => {
+    if (!brushMode) return;
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const xp = ((e.clientX - r.left) / r.width) * 100;
+    const yp = ((e.clientY - r.top) / r.height) * 100;
+    const last = brushLastPt.current;
+    brushLastPt.current = { x: e.clientX, y: e.clientY };
+    if (!last) return;
+    const d = Math.hypot(e.clientX - last.x, e.clientY - last.y);
+    if (d < 14) return;
+    a.current.lastInteract = a.current.t;
+    spawnFur(xp, yp);
+    a.current.petUntil = a.current.t + 0.8; // うっとり気味に
+    setBrushCount((c) => {
+      const nc = c + 1;
+      if (nc >= 20) {
+        if (lifeRef.current.lastBrushDay !== today) {
+          setLife((s) => ({ ...s, bond: clampBond(s.bond + 1), lastBrushDay: today, today: { ...s.today, bond: clampBond(s.bond + 1) } }));
+        }
+        say("brush", undefined, 4200);
+        spawnHearts(2, false);
+        setBrushMode(false);
+        return 0;
+      }
+      return nc;
+    });
+  };
+  const onBrushUp = () => { brushLastPt.current = null; };
+
   // ---- おやつ ----
   const left = treatsLeft(life);
   const giveTreat = () => {
@@ -756,6 +799,27 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
           style={{ position: "absolute", top: 8, left: 8, width: 40, height: 40, borderRadius: "50%", border: "2px solid #F0E0C8", background: "rgba(255,255,255,0.85)", fontSize: 20, cursor: "pointer", boxShadow: "var(--shadow-sm)", zIndex: 6, WebkitTapHighlightColor: "transparent" }}>
           👕
         </button>
+      )}
+
+      {/* ブラシボタン */}
+      {feat("brushing") && (
+        <button type="button" onClick={() => { setBrushMode((v) => !v); setBrushCount(0); brushLastPt.current = null; }} aria-label="ブラッシング"
+          style={{ position: "absolute", top: 54, left: 8, width: 40, height: 40, borderRadius: "50%", border: "2px solid " + (brushMode ? "var(--brand)" : "#F0E0C8"), background: brushMode ? "var(--brand-soft)" : "rgba(255,255,255,0.85)", fontSize: 19, cursor: "pointer", boxShadow: "var(--shadow-sm)", zIndex: 6, WebkitTapHighlightColor: "transparent" }}>
+          🪮
+        </button>
+      )}
+
+      {/* ブラシモードの操作オーバーレイ＋毛パーティクル */}
+      {brushMode && (
+        <div onPointerMove={onBrushMove} onPointerUp={onBrushUp} onPointerCancel={onBrushUp} onPointerLeave={onBrushUp}
+          style={{ position: "absolute", inset: 0, zIndex: 5, touchAction: "none", cursor: "grab" }}>
+          <div style={{ position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)", background: "rgba(255,255,255,0.9)", borderRadius: 999, padding: "4px 12px", fontFamily: "var(--font-body)", fontWeight: 800, fontSize: 11, color: "var(--text-brand)", pointerEvents: "none" }}>
+            ブラシで こすってね（{brushCount}/20）
+          </div>
+          {furs.map((f) => (
+            <span key={f.id} style={{ position: "absolute", left: `${f.x}%`, top: `${f.y}%`, fontSize: 12, pointerEvents: "none", animation: "heart-up 0.9s ease-out forwards" }}>🤎</span>
+          ))}
+        </div>
       )}
 
       {closet && (
