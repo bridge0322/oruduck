@@ -61,6 +61,8 @@ interface Anim {
   queue: string[];                  // 開いた直後に順番に再生する演出
   queueWait: number;
   idleTalkNext: number;
+  ball: { st: "fly" | "chase" | "carry"; x: number; y: number; vx: number; vy: number } | null; // ボール遊び（px座標）
+  ballCombo: number;                // 連続キャッチ数
 }
 
 const newAnim = (skipEnter: boolean): Anim => ({
@@ -74,6 +76,7 @@ const newAnim = (skipEnter: boolean): Anim => ({
   dir: 1, xOff: 0, spin: 0, lift: 0, liftV: 0,
   bone: null, butterfly: null, twins: null, star: null, moon: null,
   queue: [], queueWait: 0, idleTalkNext: 15,
+  ball: null, ballCombo: 0,
 });
 
 const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
@@ -90,6 +93,12 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const [brushCount, setBrushCount] = useState(0);
   const brushLastPt = useRef<{ x: number; y: number } | null>(null);
   const furId = useRef(0);
+  // ボール遊び
+  const stageRef = useRef<HTMLDivElement>(null);
+  const swRef = useRef(360);
+  const [ballArmed, setBallArmed] = useState(false);
+  const [flingBall, setFlingBall] = useState<{ x: number; y: number } | null>(null);
+  const flingSamples = useRef<{ x: number; y: number; t: number }[]>([]);
   const heartId = useRef(0);
   const lifeRef = useRef(life);
   lifeRef.current = life;
@@ -106,6 +115,14 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const night = tt.h >= 19 || tt.h < 5;
   const weekend = isWeekend();
   const isMin = animLevel === "min";
+
+  // ステージ幅を計測（ボールの放物線・犬の追走のpx計算に使う）
+  useEffect(() => {
+    const ro = () => { if (stageRef.current) swRef.current = stageRef.current.clientWidth; };
+    ro();
+    window.addEventListener("resize", ro);
+    return () => window.removeEventListener("resize", ro);
+  }, []);
 
   // 現在の文脈（V2エンジンの条件マッチング用）。気分・天気は Part B 実装後に接続。
   const dctx = (): DialogueContext => ({
@@ -423,8 +440,51 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         break;
     }
 
+    // ボール遊び：投げる→着地→犬が走って追う→ジャンプキャッチ→咥えて戻る→お座り
+    if (an.ball) {
+      const b = an.ball;
+      const sw = swRef.current;
+      const floorY = height - 22;
+      const dogPx = sw / 2 + an.xOff;
+      if (b.st === "fly") {
+        b.vy += dt * 1200; b.x += b.vx * dt; b.y += b.vy * dt;
+        if (b.x < 12) { b.x = 12; b.vx = Math.abs(b.vx) * 0.6; }
+        if (b.x > sw - 12) { b.x = sw - 12; b.vx = -Math.abs(b.vx) * 0.6; }
+        if (b.y >= floorY) { b.y = floorY; b.vy = 0; b.vx *= 0.35; b.st = "chase"; }
+      } else if (b.st === "chase") {
+        b.x += b.vx * dt; b.vx *= Math.max(0, 1 - dt * 2); b.y = floorY;
+        b.x = Math.max(12, Math.min(sw - 12, b.x));
+        an.dir = (b.x > dogPx ? 1 : -1);
+        an.xOff += (b.x - sw / 2 - an.xOff) * Math.min(1, dt * 3.4);
+        an.legPhase += dt * 3;
+        if (Math.abs(dogPx - b.x) < 26) {
+          if (an.lift === 0 && an.liftV === 0) an.liftV = 150; // ジャンプキャッチ
+          b.st = "carry";
+        }
+      } else if (b.st === "carry") {
+        an.xOff += (0 - an.xOff) * Math.min(1, dt * 3.4);
+        an.dir = (an.xOff > 2 ? -1 : an.xOff < -2 ? 1 : an.dir);
+        an.legPhase += dt * 2.6;
+        b.x = sw / 2 + an.xOff; b.y = floorY - 26 - an.lift;
+        if (Math.abs(an.xOff) < 8) {
+          const combo = an.ballCombo + 1;
+          an.ball = null; an.xOff = 0; an.dir = 1; an.fsm = "idle"; an.fsmT = 0;
+          an.lastInteract = an.t;
+          if (an.lift === 0 && an.liftV === 0) an.liftV = 120; // うれしくてぴょん
+          if (combo % 10 === 0) {
+            setBubble({ text: `ボールめいじん！ ${combo}かい れんぞく！`, until: an.t + 4.2 });
+            an.ballCombo = combo;
+          } else {
+            an.ballCombo = combo;
+            say("ball", undefined, 3600);
+          }
+          setLife((s) => (combo > (s.ballBestCombo || 0) ? { ...s, ballBestCombo: combo } : s));
+        }
+      }
+    }
+
     // ちょうちょ追いかけ
-    if (an.butterfly) {
+    if (!an.ball && an.butterfly) {
       an.butterfly.t += dt;
       const bt = an.butterfly.t;
       const bx = Math.sin(bt * 1.1) * 90;
@@ -442,7 +502,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     } else if (an.moon) {
       an.moon.t += dt;
       if (an.moon.t > 5) an.moon = null;
-    } else if (an.fsm !== "tailChase" && an.phase === "live") {
+    } else if (!an.ball && an.fsm !== "tailChase" && an.phase === "live") {
       an.xOff *= Math.max(0, 1 - dt * 3);
     }
   };
@@ -590,6 +650,47 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   };
   const onBrushUp = () => { brushLastPt.current = null; };
 
+  // ---- ボール遊び（フリックで投げる） ----
+  const armBall = () => {
+    if (a.current.ball || ballArmed) return;
+    wakeIfSleeping();
+    setBallArmed(true);
+    setFlingBall({ x: swRef.current / 2, y: height - 42 });
+    flingSamples.current = [];
+  };
+  const stageXY = (e: React.PointerEvent) => {
+    const r = stageRef.current!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const onFlingDown = (e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    const p = stageXY(e);
+    flingSamples.current = [{ ...p, t: performance.now() }];
+    setFlingBall(p);
+  };
+  const onFlingMove = (e: React.PointerEvent) => {
+    if (!flingSamples.current.length) return;
+    const p = stageXY(e);
+    flingSamples.current.push({ ...p, t: performance.now() });
+    if (flingSamples.current.length > 6) flingSamples.current.shift();
+    setFlingBall(p);
+  };
+  const onFlingUp = () => {
+    const s = flingSamples.current;
+    flingSamples.current = [];
+    setBallArmed(false); setFlingBall(null);
+    if (s.length < 2) return;
+    const a0 = s[0], a1 = s[s.length - 1];
+    const dtS = Math.max(0.016, (a1.t - a0.t) / 1000);
+    let vx = (a1.x - a0.x) / dtS;
+    let vy = (a1.y - a0.y) / dtS;
+    if (Math.hypot(vx, vy) < 120) return; // 弱すぎる時は投げない
+    vx = Math.max(-650, Math.min(650, vx));
+    vy = Math.min(-160, Math.max(-950, vy)); // 必ず上向きに補正
+    a.current.ball = { st: "fly", x: a1.x, y: Math.min(a1.y, height - 30), vx, vy };
+    a.current.lastInteract = a.current.t;
+  };
+
   // ---- おやつ ----
   const left = treatsLeft(life);
   const giveTreat = () => {
@@ -618,7 +719,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const late = slot === "late";
 
   let pose: Pose = "sit";
-  if (an.phase === "enter" || an.butterfly || an.fsm === "tailChase") pose = "run";
+  if (an.phase === "enter" || an.butterfly || an.fsm === "tailChase" || (an.ball && an.ball.st !== "fly")) pose = "run";
   else if (an.fsm === "sleep") pose = "sleep";
   else if (an.fsm === "sniff") pose = "sniff";
   else if (an.fsm === "stretch" || an.fsm === "wake") pose = "stretch";
@@ -650,7 +751,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const bond = life.bond;
 
   return (
-    <div style={{ position: "relative", width: "100%", height, overflow: "hidden", borderRadius: "var(--radius-card,24px)", border: "3px solid #F0E0C8", background: sky.bg, transition: "background 1.2s" }}>
+    <div ref={stageRef} style={{ position: "relative", width: "100%", height, overflow: "hidden", borderRadius: "var(--radius-card,24px)", border: "3px solid #F0E0C8", background: sky.bg, transition: "background 1.2s" }}>
       {/* 星（夜） */}
       {sky.stars && !isMin && STARS.map((s2, i) => (
         <span key={i} style={{ position: "absolute", left: `${s2[0]}%`, top: `${s2[1]}%`, width: s2[2], height: s2[2], borderRadius: "50%", background: "#FFF7D6", opacity: 0.9, animation: `twinkle ${2 + (i % 3)}s ease-in-out ${i * 0.4}s infinite` }} />
@@ -807,6 +908,39 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
           style={{ position: "absolute", top: 54, left: 8, width: 40, height: 40, borderRadius: "50%", border: "2px solid " + (brushMode ? "var(--brand)" : "#F0E0C8"), background: brushMode ? "var(--brand-soft)" : "rgba(255,255,255,0.85)", fontSize: 19, cursor: "pointer", boxShadow: "var(--shadow-sm)", zIndex: 6, WebkitTapHighlightColor: "transparent" }}>
           🪮
         </button>
+      )}
+
+      {/* ボールボタン */}
+      {feat("ballPlay") && (
+        <button type="button" onClick={armBall} aria-label="ボールであそぶ" disabled={!!an.ball || ballArmed}
+          style={{ position: "absolute", top: 100, left: 8, width: 40, height: 40, borderRadius: "50%", border: "2px solid " + (ballArmed ? "var(--brand)" : "#F0E0C8"), background: ballArmed ? "var(--brand-soft)" : "rgba(255,255,255,0.85)", fontSize: 19, cursor: an.ball ? "default" : "pointer", opacity: an.ball ? 0.5 : 1, boxShadow: "var(--shadow-sm)", zIndex: 6, WebkitTapHighlightColor: "transparent" }}>
+          🎾
+        </button>
+      )}
+
+      {/* 飛んでいる/追われているボール */}
+      {an.ball && (
+        <div style={{ position: "absolute", left: an.ball.x, top: an.ball.y, transform: "translate(-50%,-50%)", fontSize: 22, pointerEvents: "none", zIndex: 4 }}>🎾</div>
+      )}
+
+      {/* ボールを構えているときのフリック操作オーバーレイ */}
+      {ballArmed && (
+        <div onPointerDown={onFlingDown} onPointerMove={onFlingMove} onPointerUp={onFlingUp} onPointerCancel={onFlingUp}
+          style={{ position: "absolute", inset: 0, zIndex: 7, touchAction: "none", cursor: "grab" }}>
+          <div style={{ position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)", background: "rgba(255,255,255,0.9)", borderRadius: 999, padding: "4px 12px", fontFamily: "var(--font-body)", fontWeight: 800, fontSize: 11, color: "var(--text-brand)", pointerEvents: "none" }}>
+            フリックで なげてね
+          </div>
+          {flingBall && (
+            <div style={{ position: "absolute", left: flingBall.x, top: flingBall.y, transform: "translate(-50%,-50%)", fontSize: 24, pointerEvents: "none" }}>🎾</div>
+          )}
+        </div>
+      )}
+
+      {/* ボールめいじんバッジ（連続キャッチ中の控えめ表示） */}
+      {an.ball && an.ballCombo >= 1 && (
+        <div style={{ position: "absolute", top: 8, left: 54, background: "rgba(255,255,255,0.8)", borderRadius: 999, padding: "2px 8px", fontFamily: "var(--font-number)", fontWeight: 800, fontSize: 11, color: "var(--text-brand)", zIndex: 6, pointerEvents: "none" }}>
+          🎾 {an.ballCombo}
+        </div>
       )}
 
       {/* ブラシモードの操作オーバーレイ＋毛パーティクル */}
