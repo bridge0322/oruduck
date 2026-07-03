@@ -5,11 +5,13 @@
 //  streaks 100 / sleeptalk 60 / tomorrow 60 / rare 40
 import { greetings } from "./greetings";
 import { weekdays } from "./weekdays";
+import { seasonal } from "./seasonal";
 import type { Line } from "./types";
 
 export const ALL_LINES: Line[] = [
   ...greetings,
   ...weekdays,
+  ...seasonal,
 ];
 
 // カテゴリごとの本数（デバッグ表示・検品用）
