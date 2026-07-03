@@ -23,7 +23,9 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
+
+export type VisitorKind = "cat" | "bird" | "butterfly";
 
 export interface LifeState {
   v: number;                  // スキーマバージョン
@@ -57,6 +59,9 @@ export interface LifeState {
   ballBestCombo: number;                 // ボール連続キャッチの最高記録
   trickMastery: Record<string, number>;  // 芸ごとの成功回数（習熟度）
   lastBrushDay: string | null;           // ブラッシングでなつき度+1した最後の日
+  // ---- v4: 遊びに来る動物 ----
+  visitorRolledDay: string | null;       // 来訪動物の抽選をした日
+  todayVisitor: VisitorKind | null;      // きょう来る動物
 }
 
 const KEY = "oruduck_life_v1";
@@ -77,6 +82,7 @@ export function defaultLife(): LifeState {
     usedLinesV2: [], pendingTomorrow: null,
     wardrobe: { collar: null, bandana: null, hat: null },
     ballBestCombo: 0, trickMastery: {}, lastBrushDay: null,
+    visitorRolledDay: null, todayVisitor: null,
   };
 }
 

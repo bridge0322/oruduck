@@ -15,6 +15,7 @@ import { nextLockedTrick, totalMastery } from "./tricks";
 import type { Trick } from "./tricks";
 import { moodMeta, todayMood } from "./mood";
 import type { MoodKind, WeatherKind } from "./dialogues/types";
+import type { VisitorKind } from "./lifeState";
 import { cachedWeather, fetchWeather } from "./weatherApi";
 import { dayKey, diffDays, isFullMoon, isWeekend, monthKey, timeSlot, tokyoTime } from "./time";
 import type { CrashState } from "../tracker/logic/feast";
@@ -71,6 +72,7 @@ interface Anim {
   ballCombo: number;                // 連続キャッチ数
   tug: { t: number; dur: number; phase: "pull" | "win" | "lose" } | null; // 引っ張りっこ
   sleepTalkNext: number;            // 次の寝言判定時刻（0=未設定）
+  visitor: { kind: VisitorKind; reaction: "chase" | "watch" | "help" | "sneak"; t: number } | null; // 遊びに来る動物
 }
 
 const newAnim = (skipEnter: boolean): Anim => ({
@@ -84,8 +86,16 @@ const newAnim = (skipEnter: boolean): Anim => ({
   dir: 1, xOff: 0, spin: 0, lift: 0, liftV: 0,
   bone: null, butterfly: null, twins: null, star: null, moon: null,
   queue: [], queueWait: 0, idleTalkNext: 15,
-  ball: null, ballCombo: 0, tug: null, sleepTalkNext: 0,
+  ball: null, ballCombo: 0, tug: null, sleepTalkNext: 0, visitor: null,
 });
+
+const VISITOR_EMOJI: Record<VisitorKind, string> = { cat: "🐱", bird: "🐦", butterfly: "🦋" };
+const VISITOR_LINE: Record<string, string[]> = {
+  chase: ["まてまて〜！", "おいかけっこ しよ！", "つかまえるぞ〜！"],
+  watch: ["だれか きたよ…じー", "おきゃくさん かな？", "なにしてるのかな…"],
+  help: ["{name}、だれか きた！", "たすけて〜、どきどき", "うしろに いて…！"],
+  sneak: ["しー…そーっと…", "びっくり させちゃおう", "にんじゃ みたいでしょ？"],
+};
 
 const TUG_WIN = ["かった〜！ えっへん", "ぐいっ！ ぼくの かち！", "つよいでしょ？ ふふん", "かったワン！ どやっ", "ひっぱりっこ さいきょう！"];
 const TUG_LOSE = ["まけちゃった…くやしい", "うぐぐ、つよいなあ", "つぎは まけないぞ！", "ぬかれた〜 もういっかい！", "むむ、やるね {name}"];
@@ -220,7 +230,15 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     else if (r < 0.041 && night) rare = "star";
     else if (r < 0.091) rare = "butterfly";
     else if (isFullMoon() && night) rare = "moon";
-    setLife((s) => ({ ...s, rareRolledDay: today, todayRare: rare }));
+    // 遊びに来る動物（1日1回）：ネコ15%/小鳥15%/ちょうちょ10%
+    let visitor: VisitorKind | null = null;
+    if (feat("visitors")) {
+      const rv = Math.random();
+      if (rv < 0.15) visitor = "cat";
+      else if (rv < 0.30) visitor = "bird";
+      else if (rv < 0.40) visitor = "butterfly";
+    }
+    setLife((s) => ({ ...s, rareRolledDay: today, todayRare: rare, visitorRolledDay: today, todayVisitor: visitor }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [today]);
 
@@ -235,6 +253,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (s.todayRare && s.todayRare !== "rainbow") q.push(`rare.${s.todayRare}`);
     else if (s.todayRare === "rainbow") q.push("rainbowSay");
     if (valueDelta && valueDelta.dir !== "flat") q.push(`market.${valueDelta.dir}`);
+    if (feat("visitors") && s.todayVisitor && !isMin) q.push("visitor");
     a.current.queue = q;
     a.current.queueWait = animLevel === "min" ? 0.4 : 1.35; // 入場ダッシュのあとに開始
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -298,6 +317,17 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       return;
     }
     if (ev === "rainbowSay") { say("rare.rainbow", undefined, 5000); recordMemory("rainbow"); an.queueWait = 5.6; return; }
+    if (ev === "visitor") {
+      const kind = lifeRef.current.todayVisitor;
+      if (!kind) { an.queueWait = 0.2; return; }
+      const mk = moodRef.current;
+      const reaction = mk === "genki" ? "chase" : mk === "mattari" ? "watch" : mk === "amae" ? "help" : mk === "itazura" ? "sneak" : "watch";
+      an.visitor = { kind, reaction, t: 0 };
+      const lines = VISITOR_LINE[reaction];
+      setBubble({ text: fillVars(lines[Math.floor(Math.random() * lines.length)], lifeRef.current), until: an.t + 4 });
+      an.queueWait = 7.5;
+      return;
+    }
     if (ev === "market.up") {
       say("market", undefined, 5000);
       an.proudUntil = an.t + 4;
@@ -328,10 +358,19 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       if (d.sleep) { an.fsm = "sleep"; an.fsmT = 0; an.fsmDur = 1e9; }
       if (d.replay) { a.current = newAnim(false); didInit.current = false; setBubble(null); }
       if (d.weather !== undefined) setWeather(d.weather || cachedWeather() || undefined);
+      if (d.visitor) {
+        const kind = d.visitor as VisitorKind;
+        const mk = moodRef.current;
+        const reaction = mk === "genki" ? "chase" : mk === "mattari" ? "watch" : mk === "amae" ? "help" : mk === "itazura" ? "sneak" : "watch";
+        an.visitor = { kind, reaction, t: 0 };
+        const lines = VISITOR_LINE[reaction];
+        setBubble({ text: fillVars(lines[Math.floor(Math.random() * lines.length)], lifeRef.current), until: an.t + 4 });
+      }
       setTick((v) => v + 1);
     };
     window.addEventListener("oruduck-debug", h);
     return () => window.removeEventListener("oruduck-debug", h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---- メインループ ----
@@ -497,6 +536,18 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         break;
     }
 
+    // 遊びに来る動物：気分で反応が変わる
+    if (an.visitor) {
+      const v = an.visitor;
+      v.t += dt;
+      const ax = Math.cos(v.t * 0.9) * 90 - (v.t > 6 ? (v.t - 6) * 180 : 0);
+      if (v.reaction === "chase") { an.dir = ax > an.xOff ? 1 : -1; an.xOff += (ax - an.xOff) * dt * 2.4; an.legPhase += dt * 2.6; }
+      else if (v.reaction === "sneak") { an.dir = ax > an.xOff ? 1 : -1; an.xOff += (ax - an.xOff) * dt * 1.1; an.legPhase += dt * 1.6; if (v.t > 4 && v.t < 4.16 && an.lift === 0 && an.liftV === 0) an.liftV = 150; }
+      else if (v.reaction === "help") { an.xOff += (-Math.sign(ax) * 18 - an.xOff) * dt * 2; an.dir = (ax > 0 ? -1 : 1); }
+      else { an.xOff += (0 - an.xOff) * dt * 3; an.dir = (ax > 0 ? 1 : -1); }
+      if (v.t > 7.2) { an.visitor = null; an.xOff = 0; an.dir = 1; }
+    }
+
     // 引っ張りっこ：ぐいぐい引き合い、2〜4秒でランダム勝敗
     if (an.tug) {
       const g = an.tug;
@@ -581,7 +632,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     } else if (an.moon) {
       an.moon.t += dt;
       if (an.moon.t > 5) an.moon = null;
-    } else if (!an.ball && !an.tug && an.fsm !== "tailChase" && an.phase === "live") {
+    } else if (!an.ball && !an.tug && !an.visitor && an.fsm !== "tailChase" && an.phase === "live") {
       an.xOff *= Math.max(0, 1 - dt * 3);
     }
   };
@@ -836,7 +887,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
 
   let pose: Pose = "sit";
   if (an.tug) pose = "stand";
-  else if (an.phase === "enter" || an.butterfly || an.fsm === "tailChase" || (an.ball && an.ball.st !== "fly")) pose = "run";
+  else if (an.phase === "enter" || an.butterfly || an.fsm === "tailChase" || (an.ball && an.ball.st !== "fly") || (an.visitor && (an.visitor.reaction === "chase" || an.visitor.reaction === "sneak"))) pose = "run";
   else if (an.fsm === "sleep") pose = "sleep";
   else if (an.fsm === "sniff") pose = "sniff";
   else if (an.fsm === "stretch" || an.fsm === "wake") pose = "stretch";
@@ -915,6 +966,13 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       {an.star && (
         <div style={{ position: "absolute", left: `${86 - an.star.t * 20}%`, top: `${6 + an.star.t * 7}%`, width: 60, height: 3, borderRadius: 3, transform: "rotate(-18deg)", background: "linear-gradient(90deg, rgba(255,255,255,0), #FFF7D6)", opacity: an.star.t < 2 ? 1 : Math.max(0, 1 - (an.star.t - 2)), pointerEvents: "none" }}>
           <span style={{ position: "absolute", right: -6, top: -6, fontSize: 14 }}>⭐</span>
+        </div>
+      )}
+
+      {/* 遊びに来る動物 */}
+      {an.visitor && (
+        <div style={{ position: "absolute", left: `calc(50% + ${(Math.cos(an.visitor.t * 0.9) * 90 - (an.visitor.t > 6 ? (an.visitor.t - 6) * 180 : 0))}px)`, bottom: an.visitor.kind === "butterfly" ? `${height * 0.44 + Math.sin(an.visitor.t * 3) * 24}px` : `${18 + Math.abs(Math.sin(an.visitor.t * 5)) * (an.visitor.kind === "bird" ? 30 : 6)}px`, fontSize: an.visitor.kind === "butterfly" ? 22 : 26, transform: `scaleX(${Math.sin(an.visitor.t * 0.9) < 0 ? 1 : -1})`, pointerEvents: "none", zIndex: 4, transition: "none" }}>
+          {VISITOR_EMOJI[an.visitor.kind]}
         </div>
       )}
 

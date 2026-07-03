@@ -105,6 +105,8 @@ export function DebugPanel({ life, setLife }: DebugPanelProps) {
         <button type="button" style={btn} onClick={() => fire({ settle: true })}>🎉つみたて</button>
         <button type="button" style={btn} onClick={() => fire({ market: "up" })}>📈ドヤ</button>
         <button type="button" style={btn} onClick={() => fire({ market: "down" })}>📉なぐさめ</button>
+        <button type="button" style={btn} onClick={() => fire({ visitor: "cat" })}>🐱来訪</button>
+        <button type="button" style={btn} onClick={() => fire({ visitor: "bird" })}>🐦来訪</button>
         <button type="button" style={btn} onClick={() => fire({ sleep: true })}>😴寝かす</button>
         <button type="button" style={btn} onClick={() => fire({ replay: true })}>🐕入場リプレイ</button>
       </div>
