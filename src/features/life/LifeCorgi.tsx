@@ -25,6 +25,7 @@ export interface LifeCorgiProps {
   lift?: number;        // ジャンプの高さ(px)。体だけ持ち上げ、影は地面に残す
   accessory?: Accessory;
   outfit?: { collar?: OutfitItem; bandana?: OutfitItem; hat?: OutfitItem }; // 着せ替え装着中
+  raincoat?: boolean;   // 雨の日のレインコート姿
   rainbow?: boolean;    // 虹色コーギーの日
   proud?: boolean;      // 胸を張るドヤ
   blush?: boolean;
@@ -215,6 +216,13 @@ export function LifeCorgi(p: LifeCorgiProps) {
             <g id={`eyes-${uid}`}><Eye cx={168} /><Eye cx={232} /></g>
           )}
           {!p.silhouette && Mouth}
+          {/* レインコートのフード（雨の日・帽子/ナイトキャップより手前） */}
+          {!p.silhouette && p.raincoat && !p.outfit?.hat && (
+            <g id={`rain-${uid}`}>
+              <path d="M110 120 Q200 40 290 120 Q300 150 286 160 Q200 96 114 160 Q100 150 110 120 Z" fill="#F2C14E" stroke={olStroke} strokeWidth="6" strokeLinejoin="round" />
+              <ellipse cx="200" cy="150" rx="42" ry="30" fill={creamFill} stroke={olStroke} strokeWidth="5" opacity="0.0" />
+            </g>
+          )}
           {/* 帽子（装着アイテムが優先。無ければ深夜のナイトキャップ） */}
           {!p.silhouette && p.outfit?.hat ? (
             <g id={`hat-${uid}`}>{renderHat(p.outfit.hat, olStroke)}</g>

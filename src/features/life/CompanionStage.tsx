@@ -14,7 +14,8 @@ import { TrickSheet } from "./TrickSheet";
 import { nextLockedTrick, totalMastery } from "./tricks";
 import type { Trick } from "./tricks";
 import { moodMeta, todayMood } from "./mood";
-import type { MoodKind } from "./dialogues/types";
+import type { MoodKind, WeatherKind } from "./dialogues/types";
+import { cachedWeather, fetchWeather } from "./weatherApi";
 import { dayKey, diffDays, isFullMoon, isWeekend, monthKey, timeSlot, tokyoTime } from "./time";
 import type { CrashState } from "../tracker/logic/feast";
 
@@ -131,6 +132,9 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const mood: MoodKind | undefined = feat("moodSystem") ? todayMood() : undefined;
   const moodRef = useRef(mood);
   moodRef.current = mood;
+  const [weather, setWeather] = useState<WeatherKind | undefined>(feat("weather") ? (cachedWeather() ?? undefined) : undefined);
+  const weatherRef = useRef(weather);
+  weatherRef.current = weather;
 
   // ステージ幅を計測（ボールの放物線・犬の追走のpx計算に使う）
   useEffect(() => {
@@ -140,12 +144,21 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     return () => window.removeEventListener("resize", ro);
   }, []);
 
+  // 天気を取得（1時間キャッシュ・失敗時は前回値/晴れ）
+  useEffect(() => {
+    if (!feat("weather")) return;
+    let alive = true;
+    fetchWeather().then((w) => { if (alive) setWeather(w); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   // 現在の文脈（V2エンジンの条件マッチング用）。気分・天気は Part B 実装後に接続。
   const dctx = (): DialogueContext => ({
     timeOfDay: slot, weekday: tt.dow, month: tt.mo,
     affectionLv: affectionLvOf(lifeRef.current), streak: lifeRef.current.streak,
     marketTrend: valueDelta ? valueDelta.dir : undefined,
     mood: moodRef.current,
+    weather: weatherRef.current,
   });
 
   const showLine = (picked: { id: string; text: string } | null, dur: number, v2: boolean) => {
@@ -178,6 +191,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     const ctx = dctx();
     const cats = ["greet", "greet", "weekday", "season", "knowledge", "affection", "murmur"];
     if (ctx.mood) cats.push("mood", "mood");
+    if (ctx.weather) cats.push("weather");
     if (ctx.streak >= 2 && Math.random() < 0.3) cats.push("streak", "streak");
     if (ctx.marketTrend && ctx.marketTrend !== "flat") cats.push("market");
     const cat = cats[Math.floor(Math.random() * cats.length)];
@@ -313,6 +327,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       if (d.market) { an.queue.push(`market.${d.market}`); an.queueWait = Math.min(an.queueWait, 0.1); }
       if (d.sleep) { an.fsm = "sleep"; an.fsmT = 0; an.fsmDur = 1e9; }
       if (d.replay) { a.current = newAnim(false); didInit.current = false; setBubble(null); }
+      if (d.weather !== undefined) setWeather(d.weather || cachedWeather() || undefined);
       setTick((v) => v + 1);
     };
     window.addEventListener("oruduck-debug", h);
@@ -847,6 +862,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const shake = an.shakeUntil > an.t ? Math.sin(an.t * 26) * 7 : 0;
   const accessory: Accessory = late ? "nightcap" : weekend ? "bandana" : "none";
   const rainbow = life.todayRare === "rainbow";
+  const windSway = weather === "wind" && !isMin ? Math.sin(an.t * 3) * 3 : 0; // 強風で毛・体が揺れる
   const moonActive = !!an.moon;
 
   const dogW = Math.min(190, height * 0.68);
@@ -873,6 +889,18 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
             <span key={i} style={{ position: "absolute", left: `${(i * 97) % 100}%`, top: `${-20 + (i * 37) % 60}%`, width: 2, height: 14, borderRadius: 2, background: "rgba(255,255,255,0.55)", animation: `rain-fall ${0.5 + ((i * 13) % 7) / 10}s linear ${(i % 9) / 10}s infinite` }} />
           ))}
         </div>
+      )}
+
+      {/* 天気：雪（当日が雪のとき、雪の粒＋雪だるま） */}
+      {weather === "snow" && !isMin && !cloudy && (
+        <>
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2 }}>
+            {Array.from({ length: 26 }).map((_, i) => (
+              <span key={i} style={{ position: "absolute", left: `${(i * 89) % 100}%`, top: `${-10 + (i * 41) % 70}%`, width: 5, height: 5, borderRadius: "50%", background: "#fff", opacity: 0.9, animation: `rain-fall ${2 + ((i * 7) % 5) / 2}s linear ${(i % 8) / 8}s infinite` }} />
+            ))}
+          </div>
+          <div style={{ position: "absolute", bottom: 8, left: "14%", fontSize: 30, pointerEvents: "none", zIndex: 3 }}>⛄</div>
+        </>
       )}
 
       {/* 遠吠えの夜（満月レア演出）：ふけていく空 */}
@@ -924,7 +952,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         onClick={onDogTap}
         style={{ position: "absolute", left: "50%", bottom: 10 + yOff, width: dogW, height: dogW * 0.97, transform: `translateX(-50%) translateX(${an.xOff}px) scale(${scale}) rotate(${an.spin % 360}deg)`, transformOrigin: "50% 88%", cursor: "pointer", zIndex: 3, filter: moonActive ? "brightness(0.65)" : undefined }}
       >
-        <div style={{ width: "100%", height: "100%", transform: `scaleX(${an.dir}) rotate(${shake + tugRot}deg)` }}>
+        <div style={{ width: "100%", height: "100%", transform: `scaleX(${an.dir}) rotate(${shake + tugRot + windSway}deg)` }}>
           <LifeCorgi
             level={level} pose={pose}
             legPhase={an.legPhase + an.t * (pose === "run" ? 2.4 : 0)}
@@ -932,7 +960,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
             earTwitchL={an.earLT > 0 ? Math.sin(an.t * 40) * 8 : 0}
             earDown={an.earDownUntil > an.t}
             lift={an.lift}
-            accessory={accessory} outfit={outfit} rainbow={rainbow}
+            accessory={accessory} outfit={outfit} rainbow={rainbow} raincoat={weather === "rain" && !cloudy}
             proud={an.proudUntil > an.t} blush={petting}
             silhouette={moonActive}
             headTilt={an.fsm === "hug" ? 6 : 0}

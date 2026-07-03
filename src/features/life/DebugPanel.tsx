@@ -5,7 +5,8 @@ import { clampBond } from "./lifeState";
 import type { LifeState } from "./lifeState";
 import { poolSize } from "./dialogues";
 import { setMoodOverride } from "./mood";
-import type { MoodKind } from "./dialogues/types";
+import { setWeatherOverride } from "./weatherApi";
+import type { MoodKind, WeatherKind } from "./dialogues/types";
 
 // ?debug=1 のときだけ出る開発用パネル。
 // 時間帯の強制・レア演出の強制発火・なつき度の変更・各種リセットができる。
@@ -66,6 +67,16 @@ export function DebugPanel({ life, setLife }: DebugPanelProps) {
         {(["genki", "mattari", "amae", "itazura"] as MoodKind[]).map((m) => (
           <button key={m} type="button" style={btn} onClick={() => { setMoodOverride(m); fire({}); }}>
             {m === "genki" ? "元気" : m === "mattari" ? "まったり" : m === "amae" ? "甘え" : "いたずら"}
+          </button>
+        ))}
+      </div>
+
+      <div style={row}>
+        <span style={label}>天気（強制）</span>
+        <button type="button" style={btn} onClick={() => { setWeatherOverride(null); fire({ weather: "" }); }}>自動</button>
+        {(["sunny", "cloudy", "rain", "snow", "wind"] as WeatherKind[]).map((w) => (
+          <button key={w} type="button" style={btn} onClick={() => { setWeatherOverride(w); fire({ weather: w }); }}>
+            {w === "sunny" ? "晴" : w === "cloudy" ? "曇" : w === "rain" ? "雨" : w === "snow" ? "雪" : "風"}
           </button>
         ))}
       </div>
