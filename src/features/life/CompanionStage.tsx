@@ -44,7 +44,7 @@ export interface CompanionStageProps {
 }
 
 type Fsm = "idle" | "earTwitch" | "yawn" | "stretch" | "tailChase" | "sniff"
-  | "sleep" | "wake" | "catch" | "eat" | "hug" | "settleJump";
+  | "sleep" | "wake" | "catch" | "eat" | "hug" | "settleJump" | "trick";
 
 interface Heart { id: number; x: number; y: number; s: number; big?: boolean }
 
@@ -53,6 +53,7 @@ interface Anim {
   phase: "enter" | "live";
   enterT: number;
   fsm: Fsm; fsmT: number; fsmDur: number;
+  trickId: string | null;           // 実行中の芸（fsm==="trick" のとき）
   blinkNext: number; blinkUntil: number;
   lastInteract: number;
   tailPhase: number; legPhase: number;
@@ -82,7 +83,7 @@ interface Anim {
 
 const newAnim = (skipEnter: boolean): Anim => ({
   t: 0, phase: skipEnter ? "live" : "enter", enterT: 0,
-  fsm: "idle", fsmT: 0, fsmDur: 0,
+  fsm: "idle", fsmT: 0, fsmDur: 0, trickId: null,
   blinkNext: 2, blinkUntil: 0,
   lastInteract: 0,
   tailPhase: 0, legPhase: 0,
@@ -622,6 +623,11 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         if (an.fsmT < 1.6 && an.lift === 0 && an.liftV === 0) an.liftV = 240;
         if (an.fsmT >= an.fsmDur) { an.fsm = "idle"; an.fsmT = 0; }
         break;
+      case "trick":
+        // ハイタッチ・よし！は途中でもう一度はねる
+        if ((an.trickId === "highfive" || an.trickId === "ok") && an.fsmT > 0.55 && an.fsmT < 0.62 && an.lift === 0 && an.liftV === 0) an.liftV = 150;
+        if (an.fsmT >= an.fsmDur) { an.fsm = "idle"; an.fsmT = 0; an.trickId = null; an.xOff = 0; }
+        break;
     }
 
     // 遊びに来る動物：気分で反応が変わる
@@ -876,10 +882,17 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (an.fsm === "sleep") { an.fsm = "idle"; an.fsmT = 0; }
     an.lastInteract = an.t;
     setBubble({ text: t.line, until: an.t + 3.6 });
-    if (t.motion === "jump") { if (an.lift === 0 && an.liftV === 0) an.liftV = 150; }
-    else if (t.motion === "sit") { an.fsm = "idle"; an.fsmT = 0; }
-    else if (t.motion === "wait") { an.fsm = "idle"; an.fsmT = 0; an.blinkUntil = an.t + 0.2; }
-    else if (t.motion === "bang") { an.fsm = "sleep"; an.fsmT = 0; an.fsmDur = 1e9; setTimeout(() => { if (a.current.fsm === "sleep") { a.current.fsm = "wake"; a.current.fsmT = 0; a.current.fsmDur = 1.2; } }, 1500); }
+    // 芸ごとに見た目のはっきり違うモーションへ。バーンだけは寝る演出を流用。
+    if (t.motion === "bang") {
+      an.fsm = "sleep"; an.fsmT = 0; an.fsmDur = 1e9;
+      setTimeout(() => { if (a.current.fsm === "sleep") { a.current.fsm = "wake"; a.current.fsmT = 0; a.current.fsmDur = 1.2; } }, 1500);
+    } else {
+      an.fsm = "trick"; an.fsmT = 0; an.trickId = t.id;
+      an.fsmDur = t.id === "ok" || t.id === "highfive" ? 1.3 : t.id === "wait" ? 1.7 : 1.5;
+      // よし！は勢いよく最初にジャンプ
+      if (t.id === "ok" && an.lift === 0 && an.liftV === 0) an.liftV = 200;
+      if (t.id === "wait") an.earDownUntil = an.t + 1.35;
+    }
     setLife((s) => {
       const m = { ...(s.trickMastery || {}) };
       const before = totalMastery(m);
@@ -998,9 +1011,48 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   else if (an.proudUntil > an.t) mouth = "tongue";
   else if (sleeping) mouth = "closed";
 
-  const wagAmp = sleeping ? 2 : petting || an.tailSpeedMul > 1.2 ? 16 : 10;
+  // ---- 芸ごとのモーション（見た目をはっきり分ける）----
+  let pawLift: { l?: number; r?: number } | undefined;
+  let trickHeadTilt = 0;
+  let trickShake = 0;
+  if (an.fsm === "trick") {
+    const tp = an.fsmT;
+    switch (an.trickId) {
+      case "sit": // 立ってからストンと座る
+        pose = tp < 0.4 ? "stand" : "sit";
+        eyes = tp > 0.5 ? "happy" : "open";
+        mouth = "smile";
+        break;
+      case "wait": // ぐっと我慢：耳ペタン＋目つむり＋ぷるぷる、最後にほっ
+        pose = "sit";
+        if (tp < 1.35) { eyes = "closed"; mouth = "closed"; trickShake = Math.sin(an.t * 30) * 2.2; }
+        else { eyes = "happy"; mouth = "tongue"; }
+        break;
+      case "paw": // お手：左前足を上げて差し出す（ちょこちょこ動かす）
+        pose = "sit";
+        pawLift = { l: 0.62 + Math.sin(tp * 7) * 0.07 };
+        eyes = "happy"; mouth = "smile"; trickHeadTilt = 6;
+        break;
+      case "paw2": // おかわり：右前足を上げる
+        pose = "sit";
+        pawLift = { r: 0.62 + Math.sin(tp * 7) * 0.07 };
+        eyes = "happy"; mouth = "smile"; trickHeadTilt = -6;
+        break;
+      case "highfive": // ハイタッチ：前足を高く上げてジャンプ
+        pose = "sit";
+        pawLift = { l: 0.96 + Math.sin(tp * 9) * 0.04 };
+        eyes = "happy"; mouth = "tongue";
+        break;
+      case "ok": // よし！：うれしくてジャンプ
+        pose = "stand";
+        eyes = "happy"; mouth = "tongue";
+        break;
+    }
+  }
+
+  const wagAmp = sleeping ? 2 : an.fsm === "trick" ? 18 : petting || an.tailSpeedMul > 1.2 ? 16 : 10;
   const tailWag = Math.sin(an.tailPhase * Math.PI) * wagAmp;
-  const shake = an.shakeUntil > an.t ? Math.sin(an.t * 26) * 7 : 0;
+  const shake = (an.shakeUntil > an.t ? Math.sin(an.t * 26) * 7 : 0) + trickShake;
   const accessory: Accessory = late ? "nightcap" : weekend ? "bandana" : "none";
   const windSway = weather === "wind" && !isMin ? Math.sin(an.t * 3) * 3 : 0; // 強風で毛・体が揺れる
   const houseThresholds = life.houseThresholds && life.houseThresholds.length ? life.houseThresholds : DEFAULT_HOUSE_THRESHOLDS;
@@ -1141,7 +1193,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
             accessory={accessory} outfit={outfit} raincoat={weather === "rain" && !cloudy}
             proud={an.proudUntil > an.t} blush={petting}
             silhouette={moonActive}
-            headTilt={an.fsm === "hug" ? 6 : 0}
+            headTilt={an.fsm === "hug" ? 6 : trickHeadTilt}
+            pawLift={pawLift}
           />
         </div>
         {/* 頭部のなでなでエリア（上半分・44px以上） */}
