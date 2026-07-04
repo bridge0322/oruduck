@@ -158,14 +158,15 @@ export function LifeCorgi(p: LifeCorgiProps) {
             <path className="lc-ol" fill={creamFill} d="M140 324 q-2 22 14 22 q16 0 14 -22 z" />
             <path className="lc-ol" fill={creamFill} d="M232 324 q-2 22 14 22 q16 0 14 -22 z" />
           </g>
-          {/* 前足（お手・おかわり・ハイタッチで左右それぞれ「上げた足」に差し替え） */}
+          {/* 前足。お手・おかわり・ハイタッチでは、短い足のまま胸のあたりへ持ち上げる
+              （ダックスは足が短いので、棒のように伸ばさず元の肉球をそのまま上げるだけ）。 */}
           <g id={`legFront-${uid}`} transform={`translate(0 ${-sitDrop - legTuck})`} opacity={sleeping ? 0 : 1}>
-            {pawL > 0
-              ? <RaisedLeg sx={182} sy={316} px={176 - pawL * 8} py={316 - pawL * 88} cream={creamFill} ol={olStroke} />
-              : <path className="lc-ol" fill={creamFill} d="M168 324 q-2 22 14 22 q16 0 14 -22 z" />}
-            {pawR > 0
-              ? <RaisedLeg sx={218} sy={316} px={224 + pawR * 8} py={316 - pawR * 88} cream={creamFill} ol={olStroke} />
-              : <path className="lc-ol" fill={creamFill} d="M204 324 q-2 22 14 22 q16 0 14 -22 z" />}
+            <g transform={pawL > 0 ? `translate(${pawL * 10} ${-pawL * 60}) rotate(${pawL * 32} 182 324)` : undefined}>
+              <path className="lc-ol" fill={creamFill} d="M168 324 q-2 22 14 22 q16 0 14 -22 z" />
+            </g>
+            <g transform={pawR > 0 ? `translate(${-pawR * 10} ${-pawR * 60}) rotate(${-pawR * 32} 218 324)` : undefined}>
+              <path className="lc-ol" fill={creamFill} d="M204 324 q-2 22 14 22 q16 0 14 -22 z" />
+            </g>
           </g>
           <path className="lc-tn" d="M186 288 q8 10 14 0 q6 10 14 0" />
           {/* 首輪（装着中・首もとに巻く） */}
@@ -236,19 +237,6 @@ export function LifeCorgi(p: LifeCorgiProps) {
         </g>
       </g>
     </svg>
-  );
-}
-
-// 上げた前足（肩 sx,sy から 差し出す肉球 px,py までの一本の足）。
-// お手・おかわり・ハイタッチで、体の輪郭からはっきり突き出して見えるように太い線＋肉球で描く。
-function RaisedLeg({ sx, sy, px, py, cream, ol }: { sx: number; sy: number; px: number; py: number; cream: string; ol: string }) {
-  return (
-    <g>
-      <path fill="none" stroke={ol} strokeWidth={22} strokeLinecap="round" d={`M${sx} ${sy} L${px} ${py}`} />
-      <path fill="none" stroke={cream} strokeWidth={12} strokeLinecap="round" d={`M${sx} ${sy} L${px} ${py}`} />
-      <ellipse cx={px} cy={py} rx={12} ry={10} fill={cream} stroke={ol} strokeWidth={7} />
-      <path d={`M${px - 5} ${py} q5 6 10 0`} fill="none" stroke={ol} strokeWidth={3} strokeLinecap="round" />
-    </g>
   );
 }
 
