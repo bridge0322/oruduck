@@ -17,6 +17,7 @@ import { sleeptalk } from "./sleeptalk";
 import { tomorrow } from "./tomorrow";
 import { rare } from "./rare";
 import { reactions } from "./reactions";
+import { bonus } from "./bonus";
 import type { Line } from "./types";
 
 export const ALL_LINES: Line[] = [
@@ -34,6 +35,7 @@ export const ALL_LINES: Line[] = [
   ...tomorrow,
   ...rare,
   ...reactions,
+  ...bonus,
 ];
 
 // カテゴリごとの本数（デバッグ表示・検品用）
