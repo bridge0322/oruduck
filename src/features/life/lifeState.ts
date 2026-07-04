@@ -123,7 +123,10 @@ export function jackpotKind(n: number): "zorome" | "kiriban" | null {
 // 旧バージョンの保存データを最新スキーマへ。欠けているフィールドは
 // defaultLife() の既定値で埋まる（スプレッドの順で d が優先されるため）。
 export function migrateLife(d: Partial<LifeState>): LifeState {
-  return { ...defaultLife(), ...d, v: SCHEMA_VERSION };
+  const merged = { ...defaultLife(), ...d, v: SCHEMA_VERSION };
+  // 虹色の日は廃止。保存済みの虹色状態は通常色に戻す。
+  if (merged.todayRare === "rainbow") merged.todayRare = null;
+  return merged;
 }
 
 export function loadLife(): LifeState {

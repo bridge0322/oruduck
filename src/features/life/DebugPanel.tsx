@@ -97,7 +97,6 @@ export function DebugPanel({ life, setLife }: DebugPanelProps) {
         <button type="button" style={btn} onClick={() => fire({ rare: "star" })}>🌠</button>
         <button type="button" style={btn} onClick={() => fire({ rare: "twins" })}>🐶🐶</button>
         <button type="button" style={btn} onClick={() => fire({ rare: "moon" })}>🌕</button>
-        <button type="button" style={btn} onClick={() => setLife((s) => ({ ...s, todayRare: s.todayRare === "rainbow" ? null : "rainbow" }))}>🌈毛 {life.todayRare === "rainbow" ? "ON" : ""}</button>
       </div>
 
       <div style={row}>

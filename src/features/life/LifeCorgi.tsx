@@ -26,7 +26,6 @@ export interface LifeCorgiProps {
   accessory?: Accessory;
   outfit?: { collar?: OutfitItem; bandana?: OutfitItem; hat?: OutfitItem }; // 着せ替え装着中
   raincoat?: boolean;   // 雨の日のレインコート姿
-  rainbow?: boolean;    // 虹色コーギーの日
   proud?: boolean;      // 胸を張るドヤ
   blush?: boolean;
   silhouette?: boolean; // 遠吠えシルエット演出用
@@ -55,8 +54,9 @@ export function LifeCorgi(p: LifeCorgiProps) {
   // 立ち足の下端(元 y=346)を同じ変換にかけて、影をその足元に合わせる。
   const groundY = 250 + (346 - 250) * par.bodyScale * par.bodyStretch;
 
-  const tan = p.rainbow ? `url(#rb-${uid})` : TAN;
-  const inner = p.rainbow ? `url(#rb-${uid})` : INNER;
+  // 毛色はつねに Phase 1 と同じ通常色（虹色は廃止）。
+  const tan = TAN;
+  const inner = INNER;
   const bodyFill = p.silhouette ? "#2E2A45" : tan;
   const creamFill = p.silhouette ? "#3A3555" : CREAM;
   const olStroke = p.silhouette ? "#242038" : OL;
@@ -138,13 +138,6 @@ export function LifeCorgi(p: LifeCorgiProps) {
     <svg viewBox="0 0 400 388" width="100%" height="100%" style={{ display: "block", overflow: "visible" }}>
       <defs>
         <style>{`.lc-ol{stroke:${olStroke};stroke-width:9;stroke-linejoin:round;stroke-linecap:round;}.lc-tn{stroke:${olStroke};stroke-width:6;fill:none;stroke-linecap:round;}`}</style>
-        {p.rainbow && (
-          <linearGradient id={`rb-${uid}`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#F6A6B8" /><stop offset="25%" stopColor="#F8C471" />
-            <stop offset="50%" stopColor="#A8DBA8" /><stop offset="75%" stopColor="#8EC9EF" />
-            <stop offset="100%" stopColor="#C7A8E8" />
-          </linearGradient>
-        )}
       </defs>
       {/* 影は地面に固定（足元に密着）。ジャンプで体が上がるほど小さく薄くする */}
       <ellipse cx="200" cy={groundY + 8} rx={(56 - Math.min(40, lift) * 0.4) * par.bodyScale} ry={9 * par.bodyScale} fill="#000" opacity={Math.max(0.05, 0.14 - lift * 0.002)} />

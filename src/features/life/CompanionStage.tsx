@@ -245,8 +245,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (life.rareRolledDay === today) return;
     let rare: RareKind | null = null;
     const r = Math.random();
-    if (r < 0.001) rare = "rainbow";
-    else if (r < 0.011) rare = "twins";
+    // 虹色の日は廃止（毛色が気持ち悪いという声のため）
+    if (r < 0.011) rare = "twins";
     else if (r < 0.041 && night) rare = "star";
     else if (r < 0.091) rare = "butterfly";
     else if (isFullMoon() && night) rare = "moon";
@@ -275,7 +275,6 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       if (ms) q.push(`milestone.${ms}`);
     }
     if (s.todayRare && s.todayRare !== "rainbow") q.push(`rare.${s.todayRare}`);
-    else if (s.todayRare === "rainbow") q.push("rainbowSay");
     if (feat("houseUpgrade") && houseLevel > (s.lastHouseLevel ?? 0)) q.push("houseUp");
     if (feat("jackpotSlot") && !isMin) {
       const jp = jackpotKind(value) ? value : jackpotKind(principal) ? principal : 0;
@@ -348,7 +347,6 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       an.queueWait = 7;
       return;
     }
-    if (ev === "rainbowSay") { say("rare.rainbow", undefined, 5000); recordMemory("rainbow"); an.queueWait = 5.6; return; }
     if (ev.startsWith("jackpot.")) {
       const amt = Number(ev.slice(8));
       const kind = jackpotKind(amt);
@@ -1004,7 +1002,6 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const tailWag = Math.sin(an.tailPhase * Math.PI) * wagAmp;
   const shake = an.shakeUntil > an.t ? Math.sin(an.t * 26) * 7 : 0;
   const accessory: Accessory = late ? "nightcap" : weekend ? "bandana" : "none";
-  const rainbow = life.todayRare === "rainbow";
   const windSway = weather === "wind" && !isMin ? Math.sin(an.t * 3) * 3 : 0; // 強風で毛・体が揺れる
   const houseThresholds = life.houseThresholds && life.houseThresholds.length ? life.houseThresholds : DEFAULT_HOUSE_THRESHOLDS;
   const houseLevel = feat("houseUpgrade") ? houseThresholds.filter((t) => principal >= t).length : -1;
@@ -1141,7 +1138,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
             earTwitchL={an.earLT > 0 ? Math.sin(an.t * 40) * 8 : 0}
             earDown={an.earDownUntil > an.t}
             lift={an.lift}
-            accessory={accessory} outfit={outfit} rainbow={rainbow} raincoat={weather === "rain" && !cloudy}
+            accessory={accessory} outfit={outfit} raincoat={weather === "rain" && !cloudy}
             proud={an.proudUntil > an.t} blush={petting}
             silhouette={moonActive}
             headTilt={an.fsm === "hug" ? 6 : 0}
