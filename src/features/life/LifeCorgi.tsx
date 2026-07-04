@@ -169,13 +169,6 @@ export function LifeCorgi(p: LifeCorgiProps) {
             </g>
           </g>
           <path className="lc-tn" d="M186 288 q8 10 14 0 q6 10 14 0" />
-          {/* 首輪（装着中・首もとに巻く） */}
-          {!p.silhouette && p.outfit?.collar && (
-            <g id={`collar-${uid}`}>
-              <path d="M150 176 q50 26 100 0 q-4 16 -50 16 q-46 0 -50 -16 z" fill={p.outfit.collar.color} stroke={olStroke} strokeWidth="5" strokeLinejoin="round" />
-              <circle cx="200" cy="196" r="9" fill={p.outfit.collar.sub || "#FFF3C4"} stroke={olStroke} strokeWidth="4" />
-            </g>
-          )}
           {/* バンダナ（装着 or 週末デフォルト）。装着アイテムが優先。 */}
           {!p.silhouette && (p.outfit?.bandana || p.accessory === "bandana") && (() => {
             const b = p.outfit?.bandana;
@@ -235,6 +228,13 @@ export function LifeCorgi(p: LifeCorgiProps) {
             </g>
           )}
         </g>
+        {/* 首輪（頭より手前・あご下の首もとに巻く。頭に隠れないよう頭グループの後に描く） */}
+        {!p.silhouette && p.outfit?.collar && (
+          <g id={`collar-${uid}`} transform={`translate(0 ${sitDrop}) translate(200 250) scale(${par.bodyScale} ${par.bodyScale * par.bodyStretch}) translate(-200 -250)`}>
+            <path d="M148 243 Q200 258 252 243 Q250 268 200 272 Q150 268 148 243 Z" fill={p.outfit.collar.color} stroke={olStroke} strokeWidth="5" strokeLinejoin="round" />
+            <circle cx="200" cy="272" r="9" fill={p.outfit.collar.sub || "#FFF3C4"} stroke={olStroke} strokeWidth="4" />
+          </g>
+        )}
       </g>
     </svg>
   );
