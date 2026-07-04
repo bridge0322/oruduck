@@ -23,7 +23,10 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
+
+// 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
+export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
 
 export type VisitorKind = "cat" | "bird" | "butterfly";
 
@@ -65,6 +68,10 @@ export interface LifeState {
   // ---- v5: サウンド ----
   soundOn: boolean;                      // 効果音のON/OFF（既定OFF）
   soundVol: number;                      // 音量 0〜1
+  // ---- v6: グループC（演出） ----
+  houseThresholds: number[];             // 家グレードのしきい値（積立累計額）3段
+  lastHouseLevel: number;                // 前回の家グレード（進化演出の判定用）
+  milestoneShownAt: number;              // 最後に祝った節目の来訪日数
 }
 
 const KEY = "oruduck_life_v1";
@@ -87,6 +94,7 @@ export function defaultLife(): LifeState {
     ballBestCombo: 0, trickMastery: {}, lastBrushDay: null,
     visitorRolledDay: null, todayVisitor: null,
     soundOn: false, soundVol: 0.5,
+    houseThresholds: [...DEFAULT_HOUSE_THRESHOLDS], lastHouseLevel: 0, milestoneShownAt: 0,
   };
 }
 

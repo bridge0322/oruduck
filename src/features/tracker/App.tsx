@@ -22,6 +22,7 @@ import { Onboarding } from "../life/Onboarding";
 import { DiaryScreen } from "../life/DiaryScreen";
 import { SettingsScreen } from "../life/SettingsScreen";
 import { DebugPanel, isDebug } from "../life/DebugPanel";
+import { dayKey } from "../life/time";
 
 type SheetKind = "record" | "import" | null;
 
@@ -34,7 +35,9 @@ export function App() {
   const [data, setData] = useState<TrackerData>(loadData);
   // 来訪処理＋前回訪問からの評価額の変化を、初回レンダリング時に一度だけ計算する
   const [init] = useState(() => {
-    let l = beginVisit(loadLife());
+    const loaded = loadLife();
+    const firstVisitToday = loaded.lastVisitDay !== dayKey();
+    let l = beginVisit(loaded);
     const curVal = data.records.length ? data.records[data.records.length - 1].value : null;
     let delta: ValueDelta | null = null;
     if (curVal != null) {
@@ -44,7 +47,7 @@ export function App() {
       }
       l = { ...l, lastSeenValue: curVal, today: { ...l.today, market: delta ? delta.dir : l.today.market } };
     }
-    return { life: l, delta };
+    return { life: l, delta, firstVisitToday };
   });
   const [life, setLife] = useState(init.life);
   const [tab, setTab] = useState("home");
@@ -97,6 +100,8 @@ export function App() {
       valueDelta={init.delta}
       animLevel={animLevel}
       height={252}
+      principal={cur ? cur.principal : 0}
+      firstVisitToday={init.firstVisitToday}
     />
   );
 

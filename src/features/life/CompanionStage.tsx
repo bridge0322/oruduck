@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { LifeCorgi } from "./LifeCorgi";
 import type { Accessory, EyeState, MouthState, Pose } from "./LifeCorgi";
-import { applyHug, applyPet, applyTreat, bondLevel, clampBond, treatsLeft, TREATS_PER_DAY } from "./lifeState";
+import { applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, treatsLeft, TREATS_PER_DAY } from "./lifeState";
 import type { LifeState, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
 import { affectionLvOf, fillVars, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
@@ -37,6 +37,8 @@ export interface CompanionStageProps {
   valueDelta: ValueDelta | null;
   animLevel: "full" | "soft" | "min";
   height?: number;
+  principal?: number;        // 積立累計額（家グレード判定）
+  firstVisitToday?: boolean; // その日の初回訪問（朝一番乗り演出）
 }
 
 type Fsm = "idle" | "earTwitch" | "yawn" | "stretch" | "tailChase" | "sniff"
@@ -104,7 +106,7 @@ const pickTug = (r: "win" | "lose") => { const a = r === "win" ? TUG_WIN : TUG_L
 
 const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
 
-export function CompanionStage({ life, setLife, level, crash, valueDelta, animLevel, height = 280 }: CompanionStageProps) {
+export function CompanionStage({ life, setLife, level, crash, valueDelta, animLevel, height = 280, principal = 0, firstVisitToday = false }: CompanionStageProps) {
   const a = useRef<Anim>(newAnim(animLevel === "min"));
   const [, setTick] = useState(0);
   const [bubble, setBubble] = useState<{ text: string; until: number; soft?: boolean } | null>(null);
@@ -114,6 +116,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const [brushMode, setBrushMode] = useState(false);
   const [tricks, setTricks] = useState(false);
   const [trickToast, setTrickToast] = useState<string | null>(null);
+  const [milestone, setMilestone] = useState<number | null>(null); // 節目アニメ表示中の到達日数
   const [furs, setFurs] = useState<{ id: number; x: number; y: number }[]>([]);
   const [brushCount, setBrushCount] = useState(0);
   const brushLastPt = useRef<{ x: number; y: number } | null>(null);
@@ -202,6 +205,10 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       return;
     }
     if (s.sadReunion) { say("sadReunion", undefined, dur); return; }
+    if (firstVisitToday && feat("firstVisitDash")) { // 朝一番乗り
+      setBubble({ text: "いちばんのり！ きょうも あえて うれしい！", until: a.current.t + dur / 1000 });
+      return;
+    }
     const ctx = dctx();
     const cats = ["greet", "greet", "weekday", "season", "knowledge", "affection", "murmur"];
     if (ctx.mood) cats.push("mood", "mood");
@@ -253,9 +260,15 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     didInit.current = true;
     const q: string[] = ["greet"];
     const s = lifeRef.current;
-    if (s.settleDay != null && tt.d === s.settleDay && s.lastSettleMonth !== monthKey()) q.push("settle");
+    // 優先度：節目 ＞ レア ＞ 家グレードアップ ＞ 通常（積立/相場/来訪）
+    if (feat("milestoneAnim")) {
+      const ms = [100, 365, 500, 1000].find((m) => s.visitDayCount === m && s.milestoneShownAt < m);
+      if (ms) q.push(`milestone.${ms}`);
+    }
     if (s.todayRare && s.todayRare !== "rainbow") q.push(`rare.${s.todayRare}`);
     else if (s.todayRare === "rainbow") q.push("rainbowSay");
+    if (feat("houseUpgrade") && houseLevel > (s.lastHouseLevel ?? 0)) q.push("houseUp");
+    if (s.settleDay != null && tt.d === s.settleDay && s.lastSettleMonth !== monthKey()) q.push("settle");
     if (valueDelta && valueDelta.dir !== "flat") q.push(`market.${valueDelta.dir}`);
     if (feat("visitors") && s.todayVisitor && !isMin) q.push("visitor");
     a.current.queue = q;
@@ -321,6 +334,29 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       return;
     }
     if (ev === "rainbowSay") { say("rare.rainbow", undefined, 5000); recordMemory("rainbow"); an.queueWait = 5.6; return; }
+    if (ev === "houseUp") {
+      setBubble({ text: "おうちが グレードアップ！ ジャジャーン！", until: an.t + 4.4 });
+      setLife((s) => ({ ...s, lastHouseLevel: houseLevel }));
+      if (!isMin) { setConfetti(true); an.fsm = "settleJump"; an.fsmT = 0; an.fsmDur = 2; setTimeout(() => setConfetti(false), 3200); }
+      playSound("step");
+      an.queueWait = 5;
+      return;
+    }
+    if (ev.startsWith("milestone.")) {
+      const m = Number(ev.slice(10));
+      setMilestone(m);
+      setLife((s) => ({ ...s, milestoneShownAt: m }));
+      const txt = m === 100 ? "100にち ありがとう。ぺこり" : m === 365 ? "1ねんかん いっしょ！ おもいでいっぱい" : m === 500 ? "500にち！ はなびだ〜！" : "1000にち…にじが かかったよ";
+      setBubble({ text: txt, until: an.t + 5.5 });
+      if (!isMin) {
+        if (m === 100) { an.fsm = "idle"; an.earDownUntil = an.t + 1; } // お辞儀っぽく
+        else if (m === 500) { setConfetti(true); setTimeout(() => setConfetti(false), 4000); }
+        else if (m >= 365) { an.liftV = 140; }
+      }
+      setTimeout(() => setMilestone(null), 6000);
+      an.queueWait = 6.5;
+      return;
+    }
     if (ev === "visitor") {
       const kind = lifeRef.current.todayVisitor;
       if (!kind) { an.queueWait = 0.2; return; }
@@ -360,6 +396,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       if (d.settle) { an.queue.push("settle"); an.queueWait = Math.min(an.queueWait, 0.1); }
       if (d.market) { an.queue.push(`market.${d.market}`); an.queueWait = Math.min(an.queueWait, 0.1); }
       if (d.sleep) { an.fsm = "sleep"; an.fsmT = 0; an.fsmDur = 1e9; }
+      if (d.milestone) { an.queue.unshift(`milestone.${d.milestone}`); an.queueWait = Math.min(an.queueWait, 0.1); }
       if (d.replay) { a.current = newAnim(false); didInit.current = false; setBubble(null); }
       if (d.weather !== undefined) setWeather(d.weather || cachedWeather() || undefined);
       if (d.visitor) {
@@ -921,6 +958,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const accessory: Accessory = late ? "nightcap" : weekend ? "bandana" : "none";
   const rainbow = life.todayRare === "rainbow";
   const windSway = weather === "wind" && !isMin ? Math.sin(an.t * 3) * 3 : 0; // 強風で毛・体が揺れる
+  const houseThresholds = life.houseThresholds && life.houseThresholds.length ? life.houseThresholds : DEFAULT_HOUSE_THRESHOLDS;
+  const houseLevel = feat("houseUpgrade") ? houseThresholds.filter((t) => principal >= t).length : -1;
   const moonActive = !!an.moon;
 
   const dogW = Math.min(190, height * 0.68);
@@ -938,6 +977,9 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       )}
       {/* 地面 */}
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "30%", background: sky.ground, transition: "background 1.2s" }} />
+
+      {/* 犬の家（積立累計でグレードアップ・犬の背後） */}
+      {houseLevel >= 0 && <HouseBg level={houseLevel} />}
 
       {/* 曇り・雨（相場のお天気） */}
       {cloudy && <div style={{ position: "absolute", inset: 0, background: "rgba(120,130,150,0.28)", pointerEvents: "none" }} />}
@@ -973,6 +1015,27 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       {an.star && (
         <div style={{ position: "absolute", left: `${86 - an.star.t * 20}%`, top: `${6 + an.star.t * 7}%`, width: 60, height: 3, borderRadius: 3, transform: "rotate(-18deg)", background: "linear-gradient(90deg, rgba(255,255,255,0), #FFF7D6)", opacity: an.star.t < 2 ? 1 : Math.max(0, 1 - (an.star.t - 2)), pointerEvents: "none" }}>
           <span style={{ position: "absolute", right: -6, top: -6, fontSize: 14 }}>⭐</span>
+        </div>
+      )}
+
+      {/* 朝一番乗り：花びらが舞う */}
+      {firstVisitToday && feat("firstVisitDash") && !isMin && an.t < 3.6 && (
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 5 }}>
+          {Array.from({ length: 14 }).map((_, i) => (
+            <span key={i} style={{ position: "absolute", left: `${(i * 61) % 100}%`, top: -14, fontSize: 14, animation: `confetti-fall ${2 + (i % 4) * 0.4}s ease-in ${(i % 6) * 0.15}s forwards` }}>🌸</span>
+          ))}
+        </div>
+      )}
+
+      {/* 節目アニメ：1000=虹アーチ / 365=思い出フラッシュ */}
+      {milestone === 1000 && (
+        <div style={{ position: "absolute", left: "50%", top: "12%", width: 260, height: 130, transform: "translateX(-50%)", borderRadius: "130px 130px 0 0", border: "12px solid transparent", borderImage: "linear-gradient(90deg,#F6A6B8,#F8C471,#A8DBA8,#8EC9EF,#C7A8E8) 1", opacity: 0.8, pointerEvents: "none", zIndex: 5 }} />
+      )}
+      {milestone === 365 && !isMin && (
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 5 }}>
+          {["🐾", "💛", "🦴", "🌸", "⭐", "🎾"].map((e, i) => (
+            <span key={i} style={{ position: "absolute", left: `${12 + i * 14}%`, bottom: "40%", fontSize: 20, animation: `heart-up ${1.6 + (i % 3) * 0.3}s ease-out ${i * 0.2}s infinite` }}>{e}</span>
+          ))}
         </div>
       )}
 
@@ -1193,6 +1256,57 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
           onWear={celebrateOutfit}
         />
       )}
+    </div>
+  );
+}
+
+// 犬の家（グレード0=段ボール / 1=犬小屋 / 2=洋風ハウス / 3=庭付き豪邸）。犬の背後・左下に置く。
+function HouseBg({ level }: { level: number }) {
+  const OL = "#7A5230";
+  return (
+    <div style={{ position: "absolute", left: "5%", bottom: "8%", width: 96, height: 78, zIndex: 1, pointerEvents: "none" }}>
+      <svg viewBox="0 0 120 100" width="100%" height="100%" style={{ display: "block", overflow: "visible" }}>
+        {level === 0 && (
+          <g stroke={OL} strokeWidth="3" strokeLinejoin="round">
+            <path d="M22 96 L22 58 L98 58 L98 96 Z" fill="#D9B382" />
+            <path d="M22 58 L34 46 L86 46 L98 58 Z" fill="#E9C79B" />
+            <ellipse cx="60" cy="86" rx="16" ry="12" fill="#8A6A44" />
+            <path d="M40 58 L40 96 M80 58 L80 96" stroke="#B89468" strokeWidth="2" />
+          </g>
+        )}
+        {level === 1 && (
+          <g stroke={OL} strokeWidth="3" strokeLinejoin="round">
+            <path d="M24 96 L24 56 L96 56 L96 96 Z" fill="#E3A857" />
+            <path d="M16 58 L60 26 L104 58 Z" fill="#C77F35" />
+            <ellipse cx="60" cy="82" rx="16" ry="18" fill="#5C4434" />
+            <rect x="55" y="30" width="10" height="10" fill="#FBEAD0" stroke={OL} strokeWidth="2" />
+          </g>
+        )}
+        {level === 2 && (
+          <g stroke={OL} strokeWidth="3" strokeLinejoin="round">
+            <path d="M22 96 L22 54 L98 54 L98 96 Z" fill="#FBEAD0" />
+            <path d="M14 56 L60 22 L106 56 Z" fill="#E2574C" />
+            <rect x="80" y="30" width="10" height="20" fill="#B14834" />
+            <rect x="50" y="66" width="20" height="30" fill="#9A551C" />
+            <circle cx="60" cy="82" r="2" fill="#F2C14E" />
+            <rect x="30" y="64" width="14" height="14" fill="#BFE3F0" stroke={OL} strokeWidth="2" />
+            <rect x="76" y="64" width="14" height="14" fill="#BFE3F0" stroke={OL} strokeWidth="2" />
+          </g>
+        )}
+        {level >= 3 && (
+          <g stroke={OL} strokeWidth="3" strokeLinejoin="round">
+            <ellipse cx="24" cy="92" rx="16" ry="8" fill="#7FB069" />
+            <path d="M24 88 L24 66 M18 74 Q24 62 30 74" fill="none" stroke="#4E7A3F" strokeWidth="3" />
+            <path d="M14 96 L14 50 L106 50 L106 96 Z" fill="#FFF6EA" />
+            <path d="M8 52 L60 18 L112 52 Z" fill="#B14834" />
+            <path d="M60 18 L60 8 L70 8 L70 24" fill="#F2C14E" stroke={OL} strokeWidth="2" />
+            <rect x="52" y="70" width="18" height="26" fill="#9A551C" />
+            <rect x="24" y="60" width="14" height="14" fill="#BFE3F0" stroke={OL} strokeWidth="2" />
+            <rect x="82" y="60" width="14" height="14" fill="#BFE3F0" stroke={OL} strokeWidth="2" />
+            <path d="M14 50 L106 50" stroke="#F2C14E" strokeWidth="3" />
+          </g>
+        )}
+      </svg>
     </div>
   );
 }

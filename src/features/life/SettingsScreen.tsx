@@ -6,6 +6,7 @@ import { SegmentedControl } from "../../design-system/SegmentedControl";
 import { Switch } from "../../design-system/Switch";
 import { feat } from "./features";
 import { configureSound, playSound } from "./sound";
+import { DEFAULT_HOUSE_THRESHOLDS } from "./lifeState";
 import type { AnimLevel, LifeState } from "./lifeState";
 
 // せってい：よびな・毎月の積立日・アニメーションの強さ。
@@ -59,6 +60,28 @@ export function SettingsScreen({ life, setLife }: SettingsScreenProps) {
           ))}
         </select>
       </Card>
+
+      {feat("houseUpgrade") && (
+        <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>🏠 おうちが そだつ きんがく</div>
+          <div style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", lineHeight: 1.6 }}>
+            積立累計が この額を こえると、犬小屋→洋風ハウス→豪邸に なるよ。
+          </div>
+          {[0, 1, 2].map((i) => {
+            const th = life.houseThresholds && life.houseThresholds.length === 3 ? life.houseThresholds : DEFAULT_HOUSE_THRESHOLDS;
+            const labels = ["犬小屋", "洋風ハウス", "庭付き豪邸"];
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ flex: "none", width: 78, fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", fontWeight: 700, color: "var(--text-body)" }}>{labels[i]}</span>
+                <input type="number" inputMode="numeric" value={th[i]} min={0} step={100000}
+                  onChange={(e) => setLife((s) => { const cur = (s.houseThresholds && s.houseThresholds.length === 3 ? [...s.houseThresholds] : [...DEFAULT_HOUSE_THRESHOLDS]); cur[i] = Math.max(0, +e.target.value || 0); return { ...s, houseThresholds: cur }; })}
+                  style={{ flex: 1, minWidth: 0, padding: "10px 12px", borderRadius: "var(--radius-md)", border: "2px solid var(--border-strong)", fontFamily: "var(--font-number)", fontSize: "var(--text-sm)", background: "var(--surface-card)", outline: "none" }} />
+                <span style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>円</span>
+              </div>
+            );
+          })}
+        </Card>
+      )}
 
       {feat("sound") && (
         <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
