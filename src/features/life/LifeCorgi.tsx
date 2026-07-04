@@ -161,10 +161,10 @@ export function LifeCorgi(p: LifeCorgiProps) {
           {/* 前足。お手・おかわり・ハイタッチでは、短い足のまま胸のあたりへ持ち上げる
               （ダックスは足が短いので、棒のように伸ばさず元の肉球をそのまま上げるだけ）。 */}
           <g id={`legFront-${uid}`} transform={`translate(0 ${-sitDrop - legTuck})`} opacity={sleeping ? 0 : 1}>
-            <g transform={pawL > 0 ? `translate(${pawL * 10} ${-pawL * 60}) rotate(${pawL * 32} 182 324)` : undefined}>
+            <g transform={pawL > 0 ? `translate(${-pawL * 10} ${-pawL * 64}) rotate(${-pawL * 8} 182 324)` : undefined}>
               <path className="lc-ol" fill={creamFill} d="M168 324 q-2 22 14 22 q16 0 14 -22 z" />
             </g>
-            <g transform={pawR > 0 ? `translate(${-pawR * 10} ${-pawR * 60}) rotate(${-pawR * 32} 218 324)` : undefined}>
+            <g transform={pawR > 0 ? `translate(${pawR * 10} ${-pawR * 64}) rotate(${pawR * 8} 218 324)` : undefined}>
               <path className="lc-ol" fill={creamFill} d="M204 324 q-2 22 14 22 q16 0 14 -22 z" />
             </g>
           </g>
