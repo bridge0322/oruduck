@@ -113,6 +113,7 @@ export function DebugPanel({ life, setLife }: DebugPanelProps) {
         <button type="button" style={btn} onClick={() => fire({ milestone: 1000 })}>🌈節目1000</button>
         <button type="button" style={btn} onClick={() => fire({ jackpot: 1111111 })}>🎰ゾロ目</button>
         <button type="button" style={btn} onClick={() => fire({ jackpot: 3000000 })}>🎰キリ番</button>
+        <button type="button" style={btn} onClick={() => fire({ award: true })}>🏅表彰</button>
       </div>
 
       <div style={row}>

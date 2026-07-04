@@ -61,6 +61,21 @@ export function SettingsScreen({ life, setLife }: SettingsScreenProps) {
         </select>
       </Card>
 
+      {feat("goalMap") && (
+        <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>🎯 もくひょうの きんがく</div>
+          <div style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", lineHeight: 1.6 }}>
+            にっき の おさんぽマップの ゴールに なるよ。
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input type="number" inputMode="numeric" value={life.goalAmount || 1000000} min={0} step={100000}
+              onChange={(e) => setLife((s) => ({ ...s, goalAmount: Math.max(0, +e.target.value || 0) }))}
+              style={{ flex: 1, minWidth: 0, padding: "12px 14px", borderRadius: "var(--radius-md)", border: "2px solid var(--border-strong)", fontFamily: "var(--font-number)", fontSize: "var(--text-md)", background: "var(--surface-card)", outline: "none" }} />
+            <span style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-sm)", color: "var(--text-muted)" }}>円</span>
+          </div>
+        </Card>
+      )}
+
       {feat("houseUpgrade") && (
         <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>🏠 おうちが そだつ きんがく</div>

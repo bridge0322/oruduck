@@ -120,6 +120,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const [trickToast, setTrickToast] = useState<string | null>(null);
   const [milestone, setMilestone] = useState<number | null>(null); // 節目アニメ表示中の到達日数
   const [jackpot, setJackpot] = useState<{ amount: number; kind: "zorome" | "kiriban" } | null>(null);
+  const [award, setAward] = useState<string | null>(null); // 週間表彰の表示中ラベル
   const [furs, setFurs] = useState<{ id: number; x: number; y: number }[]>([]);
   const [brushCount, setBrushCount] = useState(0);
   const brushLastPt = useRef<{ x: number; y: number } | null>(null);
@@ -208,6 +209,11 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       return;
     }
     if (s.sadReunion) { say("sadReunion", undefined, dur); return; }
+    if (feat("exchangeDiary") && s.diaryReplyThanksDay && diffDays(today, s.diaryReplyThanksDay) >= 0) {
+      setBubble({ text: "きのうの おへんじ、うれしかった！ ありがとう", until: a.current.t + dur / 1000 });
+      setLife((st) => ({ ...st, diaryReplyThanksDay: null }));
+      return;
+    }
     if (firstVisitToday && feat("firstVisitDash")) { // 朝一番乗り
       setBubble({ text: "いちばんのり！ きょうも あえて うれしい！", until: a.current.t + dur / 1000 });
       return;
@@ -278,6 +284,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (s.settleDay != null && tt.d === s.settleDay && s.lastSettleMonth !== monthKey()) q.push("settle");
     if (valueDelta && valueDelta.dir !== "flat") q.push(`market.${valueDelta.dir}`);
     if (feat("visitors") && s.todayVisitor && !isMin) q.push("visitor");
+    // 週1がんばったで賞：日曜の初回訪問
+    if (feat("weeklyAward") && tt.dow === 0 && firstVisitToday && s.lastAwardWeek !== today) q.push("award");
     a.current.queue = q;
     a.current.queueWait = animLevel === "min" ? 0.4 : 1.35; // 入場ダッシュのあとに開始
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -377,6 +385,24 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       an.queueWait = 6.5;
       return;
     }
+    if (ev === "award") {
+      const s = lifeRef.current;
+      // 今週の実績から1つ選定
+      const cand = [
+        s.streak >= 7 ? { kind: "streak", label: `れんぞくらいほう賞（${s.streak}にち）` } : null,
+        s.petTotal >= 30 ? { kind: "pet", label: "なでなで王" } : null,
+        s.treatTotal >= 10 ? { kind: "treat", label: "おやつマスター賞" } : null,
+        s.hugTotal >= 10 ? { kind: "hug", label: "ぎゅ〜たいしょう" } : null,
+      ].filter(Boolean) as { kind: string; label: string }[];
+      const award = cand.length ? cand[Math.floor(Math.random() * cand.length)] : { kind: "effort", label: "まいにち がんばったで賞" };
+      setBubble({ text: `こんしゅうの ${award.label}！ おめでとう🏅`, until: an.t + 5.2 });
+      setLife((st) => ({ ...st, awards: [...(st.awards || []), { week: today, kind: award.kind, label: award.label }], lastAwardWeek: today }));
+      setAward(award.label);
+      if (!isMin) { setConfetti(true); an.fsm = "settleJump"; an.fsmT = 0; an.fsmDur = 2; setTimeout(() => setConfetti(false), 3600); }
+      setTimeout(() => setAward(null), 5200);
+      an.queueWait = 6;
+      return;
+    }
     if (ev === "visitor") {
       const kind = lifeRef.current.todayVisitor;
       if (!kind) { an.queueWait = 0.2; return; }
@@ -418,6 +444,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       if (d.sleep) { an.fsm = "sleep"; an.fsmT = 0; an.fsmDur = 1e9; }
       if (d.milestone) { an.queue.unshift(`milestone.${d.milestone}`); an.queueWait = Math.min(an.queueWait, 0.1); }
       if (d.jackpot) { setJackpot({ amount: Number(d.jackpot), kind: (jackpotKind(Number(d.jackpot)) || "kiriban") }); }
+      if (d.award) { an.queue.unshift("award"); an.queueWait = Math.min(an.queueWait, 0.1); }
       if (d.replay) { a.current = newAnim(false); didInit.current = false; setBubble(null); }
       if (d.weather !== undefined) setWeather(d.weather || cachedWeather() || undefined);
       if (d.visitor) {
@@ -1058,6 +1085,11 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
             <span key={i} style={{ position: "absolute", left: `${12 + i * 14}%`, bottom: "40%", fontSize: 20, animation: `heart-up ${1.6 + (i % 3) * 0.3}s ease-out ${i * 0.2}s infinite` }}>{e}</span>
           ))}
         </div>
+      )}
+
+      {/* 週間表彰：メダル */}
+      {award && (
+        <div style={{ position: "absolute", left: "50%", top: "44%", transform: "translate(-50%,-50%)", fontSize: 40, zIndex: 5, pointerEvents: "none", animation: "pop-in .4s var(--ease-bounce)" }}>🏅</div>
       )}
 
       {/* 遊びに来る動物 */}

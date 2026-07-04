@@ -161,7 +161,7 @@ export function App() {
           </div>
         )}
         {tab === "history" && <HistoryScreen data={data} />}
-        {tab === "diary" && <DiaryScreen life={life} records={data.records} />}
+        {tab === "diary" && <DiaryScreen life={life} setLife={setLife} records={data.records} />}
         {tab === "settings" && <SettingsScreen life={life} setLife={setLife} />}
       </main>
 

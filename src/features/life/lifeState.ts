@@ -23,7 +23,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -74,6 +74,14 @@ export interface LifeState {
   milestoneShownAt: number;              // 最後に祝った節目の来訪日数
   // ---- v7: ゾロ目スロット ----
   jackpotShownValue: number;             // 最後にスロット演出を出した金額（重複防止）
+  // ---- v8: グループD（蓄積） ----
+  goalAmount: number;                    // 目標額（お散歩マップ）
+  goalReached: number[];                 // 到達済みランドマーク（10,20,…100）
+  diaryReplies: Record<string, string>;  // 交換日記の返信（day→本文）
+  diaryReplyThanksDay: string | null;    // お返事のお礼を言う日
+  lettersOpened: string[];               // 開封した月の手紙 "YYYY-MM"
+  awards: { week: string; kind: string; label: string }[]; // 週間表彰の履歴
+  lastAwardWeek: string | null;          // 最後に表彰した週
 }
 
 const KEY = "oruduck_life_v1";
@@ -98,6 +106,8 @@ export function defaultLife(): LifeState {
     soundOn: false, soundVol: 0.5,
     houseThresholds: [...DEFAULT_HOUSE_THRESHOLDS], lastHouseLevel: 0, milestoneShownAt: 0,
     jackpotShownValue: 0,
+    goalAmount: 1000000, goalReached: [], diaryReplies: {}, diaryReplyThanksDay: null,
+    lettersOpened: [], awards: [], lastAwardWeek: null,
   };
 }
 
