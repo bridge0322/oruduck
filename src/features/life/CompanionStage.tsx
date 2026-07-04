@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { LifeCorgi } from "./LifeCorgi";
 import type { Accessory, EyeState, MouthState, Pose } from "./LifeCorgi";
-import { applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, treatsLeft, TREATS_PER_DAY } from "./lifeState";
+import { applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, jackpotKind, treatsLeft, TREATS_PER_DAY } from "./lifeState";
+import { JackpotSlot } from "./JackpotSlot";
 import type { LifeState, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
 import { affectionLvOf, fillVars, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
@@ -38,6 +39,7 @@ export interface CompanionStageProps {
   animLevel: "full" | "soft" | "min";
   height?: number;
   principal?: number;        // 積立累計額（家グレード判定）
+  value?: number;            // 現在の評価額（ゾロ目スロット判定）
   firstVisitToday?: boolean; // その日の初回訪問（朝一番乗り演出）
 }
 
@@ -106,7 +108,7 @@ const pickTug = (r: "win" | "lose") => { const a = r === "win" ? TUG_WIN : TUG_L
 
 const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
 
-export function CompanionStage({ life, setLife, level, crash, valueDelta, animLevel, height = 280, principal = 0, firstVisitToday = false }: CompanionStageProps) {
+export function CompanionStage({ life, setLife, level, crash, valueDelta, animLevel, height = 280, principal = 0, value = 0, firstVisitToday = false }: CompanionStageProps) {
   const a = useRef<Anim>(newAnim(animLevel === "min"));
   const [, setTick] = useState(0);
   const [bubble, setBubble] = useState<{ text: string; until: number; soft?: boolean } | null>(null);
@@ -117,6 +119,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const [tricks, setTricks] = useState(false);
   const [trickToast, setTrickToast] = useState<string | null>(null);
   const [milestone, setMilestone] = useState<number | null>(null); // 節目アニメ表示中の到達日数
+  const [jackpot, setJackpot] = useState<{ amount: number; kind: "zorome" | "kiriban" } | null>(null);
   const [furs, setFurs] = useState<{ id: number; x: number; y: number }[]>([]);
   const [brushCount, setBrushCount] = useState(0);
   const brushLastPt = useRef<{ x: number; y: number } | null>(null);
@@ -268,6 +271,10 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (s.todayRare && s.todayRare !== "rainbow") q.push(`rare.${s.todayRare}`);
     else if (s.todayRare === "rainbow") q.push("rainbowSay");
     if (feat("houseUpgrade") && houseLevel > (s.lastHouseLevel ?? 0)) q.push("houseUp");
+    if (feat("jackpotSlot") && !isMin) {
+      const jp = jackpotKind(value) ? value : jackpotKind(principal) ? principal : 0;
+      if (jp && jp !== (s.jackpotShownValue ?? 0)) q.push(`jackpot.${jp}`);
+    }
     if (s.settleDay != null && tt.d === s.settleDay && s.lastSettleMonth !== monthKey()) q.push("settle");
     if (valueDelta && valueDelta.dir !== "flat") q.push(`market.${valueDelta.dir}`);
     if (feat("visitors") && s.todayVisitor && !isMin) q.push("visitor");
@@ -334,6 +341,19 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       return;
     }
     if (ev === "rainbowSay") { say("rare.rainbow", undefined, 5000); recordMemory("rainbow"); an.queueWait = 5.6; return; }
+    if (ev.startsWith("jackpot.")) {
+      const amt = Number(ev.slice(8));
+      const kind = jackpotKind(amt);
+      if (kind) {
+        setJackpot({ amount: amt, kind });
+        setLife((s) => ({ ...s, jackpotShownValue: amt }));
+        an.tailSpeedMul = 2.6; // 大興奮
+        setTimeout(() => { a.current.tailSpeedMul = 1; }, 3500);
+        setTimeout(() => { if (a.current.lift === 0 && a.current.liftV === 0) a.current.liftV = 150; }, 1600);
+      }
+      an.queueWait = 4.5;
+      return;
+    }
     if (ev === "houseUp") {
       setBubble({ text: "おうちが グレードアップ！ ジャジャーン！", until: an.t + 4.4 });
       setLife((s) => ({ ...s, lastHouseLevel: houseLevel }));
@@ -397,6 +417,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       if (d.market) { an.queue.push(`market.${d.market}`); an.queueWait = Math.min(an.queueWait, 0.1); }
       if (d.sleep) { an.fsm = "sleep"; an.fsmT = 0; an.fsmDur = 1e9; }
       if (d.milestone) { an.queue.unshift(`milestone.${d.milestone}`); an.queueWait = Math.min(an.queueWait, 0.1); }
+      if (d.jackpot) { setJackpot({ amount: Number(d.jackpot), kind: (jackpotKind(Number(d.jackpot)) || "kiriban") }); }
       if (d.replay) { a.current = newAnim(false); didInit.current = false; setBubble(null); }
       if (d.weather !== undefined) setWeather(d.weather || cachedWeather() || undefined);
       if (d.visitor) {
@@ -1248,6 +1269,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
           ))}
         </div>
       )}
+
+      {jackpot && <JackpotSlot amount={jackpot.amount} kind={jackpot.kind} onDone={() => setJackpot(null)} />}
 
       {closet && (
         <ClosetSheet

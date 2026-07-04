@@ -101,6 +101,7 @@ export function App() {
       animLevel={animLevel}
       height={252}
       principal={cur ? cur.principal : 0}
+      value={cur ? cur.value : 0}
       firstVisitToday={init.firstVisitToday}
     />
   );

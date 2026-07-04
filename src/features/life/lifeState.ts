@@ -23,7 +23,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -72,6 +72,8 @@ export interface LifeState {
   houseThresholds: number[];             // 家グレードのしきい値（積立累計額）3段
   lastHouseLevel: number;                // 前回の家グレード（進化演出の判定用）
   milestoneShownAt: number;              // 最後に祝った節目の来訪日数
+  // ---- v7: ゾロ目スロット ----
+  jackpotShownValue: number;             // 最後にスロット演出を出した金額（重複防止）
 }
 
 const KEY = "oruduck_life_v1";
@@ -95,7 +97,17 @@ export function defaultLife(): LifeState {
     visitorRolledDay: null, todayVisitor: null,
     soundOn: false, soundVol: 0.5,
     houseThresholds: [...DEFAULT_HOUSE_THRESHOLDS], lastHouseLevel: 0, milestoneShownAt: 0,
+    jackpotShownValue: 0,
   };
+}
+
+// ゾロ目（全桁同じ）／キリ番（100万円単位）の判定
+export function jackpotKind(n: number): "zorome" | "kiriban" | null {
+  if (!n || n < 100000) return null;
+  const s = String(Math.round(n));
+  if (s.length >= 3 && /^(\d)\1+$/.test(s)) return "zorome";
+  if (n % 1000000 === 0) return "kiriban";
+  return null;
 }
 
 // 旧バージョンの保存データを最新スキーマへ。欠けているフィールドは
