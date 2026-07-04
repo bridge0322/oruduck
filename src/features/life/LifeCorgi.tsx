@@ -228,11 +228,10 @@ export function LifeCorgi(p: LifeCorgiProps) {
             </g>
           )}
         </g>
-        {/* 首輪（頭より手前・あご下の首もとに巻く。頭に隠れないよう頭グループの後に描く） */}
+        {/* 首輪（頭より手前・あごのすぐ下の首もとに、細く巻く。鈴なし） */}
         {!p.silhouette && p.outfit?.collar && (
           <g id={`collar-${uid}`} transform={`translate(0 ${sitDrop}) translate(200 250) scale(${par.bodyScale} ${par.bodyScale * par.bodyStretch}) translate(-200 -250)`}>
-            <path d="M148 243 Q200 258 252 243 Q250 268 200 272 Q150 268 148 243 Z" fill={p.outfit.collar.color} stroke={olStroke} strokeWidth="5" strokeLinejoin="round" />
-            <circle cx="200" cy="272" r="9" fill={p.outfit.collar.sub || "#FFF3C4"} stroke={olStroke} strokeWidth="4" />
+            <path d="M154 242 Q200 253 246 242 Q246 247 200 257 Q154 247 154 242 Z" fill={p.outfit.collar.color} stroke={olStroke} strokeWidth="4" strokeLinejoin="round" />
           </g>
         )}
       </g>
