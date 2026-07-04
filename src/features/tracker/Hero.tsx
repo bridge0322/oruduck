@@ -33,7 +33,7 @@ export function Hero({ cur, peak, scene }: HeroProps) {
         {inEvent
           ? <Badge tone="negative"><i className="ph-fill ph-cloud-rain" style={{ marginRight: 3 }} />{crash.label}</Badge>
           : <Badge tone={condTone(cond.key)}>{cond.label}</Badge>}
-        <span style={{ marginLeft: "auto", fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", fontWeight: 700 }}>
+        <span style={{ marginLeft: "auto", flexShrink: 0, whiteSpace: "nowrap", fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", fontWeight: 700 }}>
           なでても あそべるよ 🐾
         </span>
       </div>

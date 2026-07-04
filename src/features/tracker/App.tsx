@@ -99,7 +99,7 @@ export function App() {
       crash={crash && crash.level >= 1 ? crash : null}
       valueDelta={init.delta}
       animLevel={animLevel}
-      height={252}
+      height={300}
       principal={cur ? cur.principal : 0}
       value={cur ? cur.value : 0}
       firstVisitToday={init.firstVisitToday}

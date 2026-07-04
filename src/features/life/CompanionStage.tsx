@@ -1007,7 +1007,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const houseLevel = feat("houseUpgrade") ? houseThresholds.filter((t) => principal >= t).length : -1;
   const moonActive = !!an.moon;
 
-  const dogW = Math.min(190, height * 0.68);
+  const dogW = Math.min(210, height * 0.68);
   const bond = life.bond;
 
   return (
@@ -1119,7 +1119,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
 
       {/* 吹き出し */}
       {bubble && an.t < bubble.until && (
-        <div style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", maxWidth: "86%", background: bubble.soft ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.96)", padding: bubble.soft ? "7px 13px" : "9px 15px", borderRadius: 18, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: bubble.soft ? "var(--text-xs)" : "var(--text-sm)", color: bubble.soft ? "var(--text-muted)" : "var(--text-strong)", boxShadow: "var(--shadow-sm)", textAlign: "center", lineHeight: 1.45, zIndex: 6, animation: "pop-in .3s var(--ease-bounce)", opacity: bubble.soft ? 0.85 : 1 }}>
+        <div style={{ position: "absolute", top: 44, left: "50%", transform: "translateX(-50%)", maxWidth: "78%", background: bubble.soft ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.96)", padding: bubble.soft ? "7px 13px" : "9px 15px", borderRadius: 18, fontFamily: "var(--font-display)", fontWeight: 700, fontSize: bubble.soft ? "var(--text-xs)" : "var(--text-sm)", color: bubble.soft ? "var(--text-muted)" : "var(--text-strong)", boxShadow: "var(--shadow-sm)", textAlign: "center", lineHeight: 1.45, zIndex: 7, animation: "pop-in .3s var(--ease-bounce)", opacity: bubble.soft ? 0.85 : 1 }}>
           {bubble.text}
           <span style={{ position: "absolute", bottom: -7, left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: `8px solid ${bubble.soft ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.96)"}` }} />
         </div>
@@ -1205,7 +1205,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
 
       {/* 相場の天気メーター（下落中のみ・控えめ） */}
       {cloudy && crash && (
-        <div style={{ position: "absolute", bottom: 10, left: 10, display: "flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.72)", borderRadius: 999, padding: "3px 8px", zIndex: 6, fontSize: 11, fontFamily: "var(--font-body)", fontWeight: 700, color: "var(--text-muted)" }}>
+        <div style={{ position: "absolute", bottom: 10, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 3, background: "rgba(255,255,255,0.72)", borderRadius: 999, padding: "3px 8px", zIndex: 6, fontSize: 11, fontFamily: "var(--font-body)", fontWeight: 700, color: "var(--text-muted)" }}>
           {crash.label} {crash.dd.toFixed(1)}%
         </div>
       )}
@@ -1316,7 +1316,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
 function HouseBg({ level }: { level: number }) {
   const OL = "#7A5230";
   return (
-    <div style={{ position: "absolute", left: "5%", bottom: "8%", width: 96, height: 78, zIndex: 1, pointerEvents: "none" }}>
+    <div style={{ position: "absolute", left: "3%", bottom: "2%", width: 80, height: 56, zIndex: 1, pointerEvents: "none" }}>
       <svg viewBox="0 0 120 100" width="100%" height="100%" style={{ display: "block", overflow: "visible" }}>
         {level === 0 && (
           <g stroke={OL} strokeWidth="3" strokeLinejoin="round">
