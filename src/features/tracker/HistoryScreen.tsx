@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { Card } from "../../design-system/Card";
 import { Badge } from "../../design-system/Badge";
+import { SegmentedControl } from "../../design-system/SegmentedControl";
 import { HistoryChart } from "./HistoryChart";
+import { GraphWalk } from "./GraphWalk";
 import { YEN } from "./logic/format";
+import { feat } from "../life/features";
 import type { TrackerData } from "./logic/persistence";
 
 export interface HistoryScreenProps {
@@ -10,11 +14,18 @@ export interface HistoryScreenProps {
 
 export function HistoryScreen({ data }: HistoryScreenProps) {
   const recs = [...data.records].reverse();
+  const [view, setView] = useState<"chart" | "walk">("chart");
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card elevation="sm">
-        <div style={{ fontFamily: "var(--font-body)", fontWeight: 700, fontSize: "var(--text-base)", color: "var(--text-strong)", marginBottom: 12 }}>評価額の推移</div>
-        <HistoryChart records={data.records} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 10 }}>
+          <div style={{ fontFamily: "var(--font-body)", fontWeight: 700, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>評価額の推移</div>
+          {feat("graphWalk") && (
+            <SegmentedControl size="sm" value={view} onChange={(v) => setView(v as "chart" | "walk")}
+              options={[{ value: "chart", label: "グラフ" }, { value: "walk", label: "さんぽ道" }]} style={{ width: 168, flex: "none" }} />
+          )}
+        </div>
+        {view === "walk" && feat("graphWalk") ? <GraphWalk records={data.records} /> : <HistoryChart records={data.records} />}
       </Card>
       <Card elevation="sm">
         <div style={{ fontFamily: "var(--font-body)", fontWeight: 700, fontSize: "var(--text-base)", color: "var(--text-strong)", marginBottom: 8 }}>記録の履歴</div>
