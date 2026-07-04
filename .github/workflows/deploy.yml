@@ -35,7 +35,22 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: https://bridge0322.github.io/oruduck/
     steps:
-      - id: deployment
+      # GitHub Pages のデプロイAPIは時々 "Deployment failed, try again later." を
+      # 返す（ビルドは成功しているのに公開だけ失敗する一時的な不調）。最大3回まで
+      # 自動でリトライして自己修復させ、手動での再実行を不要にする。
+      - id: deploy1
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - if: steps.deploy1.outcome == 'failure'
+        run: sleep 20
+      - id: deploy2
+        if: steps.deploy1.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        run: sleep 30
+      - id: deploy3
+        if: steps.deploy1.outcome == 'failure' && steps.deploy2.outcome == 'failure'
         uses: actions/deploy-pages@v4
