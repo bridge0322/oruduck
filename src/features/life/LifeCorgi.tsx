@@ -25,7 +25,7 @@ export interface LifeCorgiProps {
   lift?: number;        // ジャンプの高さ(px)。体だけ持ち上げ、影は地面に残す
   pawLift?: { l?: number; r?: number }; // 前足を上げる回転角(deg)。お手／おかわり／ハイタッチ用
   accessory?: Accessory;
-  outfit?: { collar?: OutfitItem; bandana?: OutfitItem; hat?: OutfitItem }; // 着せ替え装着中
+  outfit?: { collar?: OutfitItem; bandana?: OutfitItem; hat?: OutfitItem; shirt?: OutfitItem }; // 着せ替え装着中
   raincoat?: boolean;   // 雨の日のレインコート姿
   proud?: boolean;      // 胸を張るドヤ
   blush?: boolean;
@@ -168,7 +168,25 @@ export function LifeCorgi(p: LifeCorgiProps) {
               <path className="lc-ol" fill={creamFill} d="M204 324 q-2 22 14 22 q16 0 14 -22 z" />
             </g>
           </g>
-          <path className="lc-tn" d="M186 288 q8 10 14 0 q6 10 14 0" />
+          {/* ボーダーシャツ（胴に着る・ボーダー柄）。着ているときは胸の毛もようを隠す。 */}
+          {!p.silhouette && p.outfit?.shirt && (() => {
+            const base = p.outfit.shirt.sub || "#FBEAD0";
+            const stripe = p.outfit.shirt.color;
+            const d = "M128 232 Q200 253 272 232 Q281 283 246 310 Q200 324 154 310 Q119 283 128 232 Z";
+            return (
+              <g id={`shirt-${uid}`}>
+                <clipPath id={`shirtclip-${uid}`}><path d={d} /></clipPath>
+                <path d={d} fill={base} stroke={olStroke} strokeWidth="6" strokeLinejoin="round" />
+                <g clipPath={`url(#shirtclip-${uid})`}>
+                  {[242, 260, 278, 296].map((y, i) => (
+                    <rect key={i} x="112" y={y} width="176" height="11" fill={stripe} />
+                  ))}
+                </g>
+                <path d="M128 232 Q200 253 272 232" fill="none" stroke={olStroke} strokeWidth="6" strokeLinecap="round" />
+              </g>
+            );
+          })()}
+          {!p.outfit?.shirt && <path className="lc-tn" d="M186 288 q8 10 14 0 q6 10 14 0" />}
           {/* バンダナ（装着 or 週末デフォルト）。装着アイテムが優先。 */}
           {!p.silhouette && (p.outfit?.bandana || p.accessory === "bandana") && (() => {
             const b = p.outfit?.bandana;
@@ -231,7 +249,7 @@ export function LifeCorgi(p: LifeCorgiProps) {
         {/* 首輪（頭より手前・あごのすぐ下の首もとに、細く巻く。鈴なし） */}
         {!p.silhouette && p.outfit?.collar && (
           <g id={`collar-${uid}`} transform={`translate(0 ${sitDrop}) translate(200 250) scale(${par.bodyScale} ${par.bodyScale * par.bodyStretch}) translate(-200 -250)`}>
-            <path d="M154 242 Q200 253 246 242 Q246 247 200 257 Q154 247 154 242 Z" fill={p.outfit.collar.color} stroke={olStroke} strokeWidth="4" strokeLinejoin="round" />
+            <path d="M156 233 Q200 244 244 233 Q244 238 200 248 Q156 238 156 233 Z" fill={p.outfit.collar.color} stroke={olStroke} strokeWidth="4" strokeLinejoin="round" />
           </g>
         )}
       </g>

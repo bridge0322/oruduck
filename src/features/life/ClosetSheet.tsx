@@ -18,11 +18,12 @@ const SLOTS: { key: Slot; label: string }[] = [
   { key: "collar", label: "くびわ" },
   { key: "bandana", label: "バンダナ" },
   { key: "hat", label: "ぼうし" },
+  { key: "shirt", label: "ふく" },
 ];
 
 export function ClosetSheet({ life, setLife, onClose, onWear }: ClosetSheetProps) {
   const [slot, setSlot] = useState<Slot>("collar");
-  const wd = life.wardrobe || { collar: null, bandana: null, hat: null };
+  const wd = life.wardrobe || { collar: null, bandana: null, hat: null, shirt: null };
   const items = ITEMS.filter((it) => it.slot === slot);
   const unlockedCount = ITEMS.filter((it) => isUnlocked(it, life)).length;
 
@@ -30,7 +31,7 @@ export function ClosetSheet({ life, setLife, onClose, onWear }: ClosetSheetProps
     const it = itemById(id);
     return it ? { id: it.id, color: it.color, sub: it.sub } : undefined;
   };
-  const preview = { collar: toOutfit(wd.collar), bandana: toOutfit(wd.bandana), hat: toOutfit(wd.hat) };
+  const preview = { collar: toOutfit(wd.collar), bandana: toOutfit(wd.bandana), hat: toOutfit(wd.hat), shirt: toOutfit(wd.shirt) };
 
   const wear = (it: Item) => {
     if (!isUnlocked(it, life)) return;

@@ -23,7 +23,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -62,7 +62,7 @@ export interface LifeState {
   usedLinesV2: { id: string; day: string }[]; // 30日重複回避（上限2,000 LRU）
   pendingTomorrow: { day: string } | null;    // 明日の予告→翌日フォローアップ
   // ---- v3: Part B グループA（遊び） ----
-  wardrobe: { collar: string | null; bandana: string | null; hat: string | null }; // 着せ替え装着中
+  wardrobe: { collar: string | null; bandana: string | null; hat: string | null; shirt: string | null }; // 着せ替え装着中
   ballBestCombo: number;                 // ボール連続キャッチの最高記録
   trickMastery: Record<string, number>;  // 芸ごとの成功回数（習熟度）
   lastBrushDay: string | null;           // ブラッシングでなつき度+1した最後の日
@@ -104,7 +104,7 @@ export function defaultLife(): LifeState {
     rareRolledDay: null, todayRare: null,
     memories: [], usedLines: [], animLevel: null,
     usedLinesV2: [], pendingTomorrow: null,
-    wardrobe: { collar: null, bandana: null, hat: null },
+    wardrobe: { collar: null, bandana: null, hat: null, shirt: null },
     ballBestCombo: 0, trickMastery: {}, lastBrushDay: null,
     visitorRolledDay: null, todayVisitor: null,
     soundOn: false, soundVol: 0.5,
@@ -132,6 +132,9 @@ export function migrateLife(d: Partial<LifeState>): LifeState {
   if (merged.todayRare === "rainbow") merged.todayRare = null;
   // 敬称は3種のいずれか。未知の値は「ちゃん」に寄せる。
   if (merged.honorific !== "chan" && merged.honorific !== "kun" && merged.honorific !== "none") merged.honorific = "chan";
+  // 着せ替えスロットに shirt を追加（旧データには無い）。欠けたスロットは null で補う。
+  const w = (merged.wardrobe || {}) as Partial<LifeState["wardrobe"]>;
+  merged.wardrobe = { collar: w.collar ?? null, bandana: w.bandana ?? null, hat: w.hat ?? null, shirt: w.shirt ?? null };
   return merged;
 }
 

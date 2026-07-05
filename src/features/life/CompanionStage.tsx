@@ -823,12 +823,12 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   };
 
   // ---- 着せ替え ----
-  const wd = life.wardrobe || { collar: null, bandana: null, hat: null };
+  const wd = life.wardrobe || { collar: null, bandana: null, hat: null, shirt: null };
   const toOutfit = (id: string | null) => {
     const it = itemById(id);
     return it ? { id: it.id, color: it.color, sub: it.sub } : undefined;
   };
-  const outfit = { collar: toOutfit(wd.collar), bandana: toOutfit(wd.bandana), hat: toOutfit(wd.hat) };
+  const outfit = { collar: toOutfit(wd.collar), bandana: toOutfit(wd.bandana), hat: toOutfit(wd.hat), shirt: toOutfit(wd.shirt) };
   // 装着したら「にあう？」とその場で一回転
   const celebrateOutfit = () => {
     const an = a.current;
