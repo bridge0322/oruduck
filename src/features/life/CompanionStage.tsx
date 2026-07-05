@@ -9,7 +9,7 @@ import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngi
 import { affectionLvOf, fillVars, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
 import type { DialogueContext } from "./dialogueEngineV2";
 import { feat } from "./features";
-import { itemById } from "./dressup";
+import { outfitOf } from "./dressup";
 import { ClosetSheet } from "./ClosetSheet";
 import { TrickSheet } from "./TrickSheet";
 import { nextLockedTrick, totalMastery } from "./tricks";
@@ -102,6 +102,10 @@ const VISITOR_LINE: Record<string, string[]> = {
   help: ["{name}、だれか きた！", "たすけて〜、どきどき", "うしろに いて…！"],
   sneak: ["しー…そーっと…", "びっくり させちゃおう", "にんじゃ みたいでしょ？"],
 };
+
+// 今日の気分 → 来訪動物へのリアクション（げんき=追いかける／あまえ=助けを呼ぶ／いたずら=忍び寄る／それ以外=見守る）
+const visitorReaction = (mk: string | undefined): "chase" | "watch" | "help" | "sneak" =>
+  mk === "genki" ? "chase" : mk === "amae" ? "help" : mk === "itazura" ? "sneak" : "watch";
 
 const TUG_WIN = ["かった〜！ えっへん", "ぐいっ！ ぼくの かち！", "つよいでしょ？ ふふん", "かったワン！ どやっ", "ひっぱりっこ さいきょう！"];
 const TUG_LOSE = ["まけちゃった…くやしい", "うぐぐ、つよいなあ", "つぎは まけないぞ！", "ぬかれた〜 もういっかい！", "むむ、やるね {name}"];
@@ -404,8 +408,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (ev === "visitor") {
       const kind = lifeRef.current.todayVisitor;
       if (!kind) { an.queueWait = 0.2; return; }
-      const mk = moodRef.current;
-      const reaction = mk === "genki" ? "chase" : mk === "mattari" ? "watch" : mk === "amae" ? "help" : mk === "itazura" ? "sneak" : "watch";
+      const reaction = visitorReaction(moodRef.current);
       an.visitor = { kind, reaction, t: 0 };
       recordMemory(`visit_${kind}` as MemoryKind);
       const lines = VISITOR_LINE[reaction];
@@ -448,8 +451,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       if (d.weather !== undefined) setWeather(d.weather || cachedWeather() || undefined);
       if (d.visitor) {
         const kind = d.visitor as VisitorKind;
-        const mk = moodRef.current;
-        const reaction = mk === "genki" ? "chase" : mk === "mattari" ? "watch" : mk === "amae" ? "help" : mk === "itazura" ? "sneak" : "watch";
+        const reaction = visitorReaction(moodRef.current);
         an.visitor = { kind, reaction, t: 0 };
         recordMemory(`visit_${kind}` as MemoryKind);
         const lines = VISITOR_LINE[reaction];
@@ -824,12 +826,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   };
 
   // ---- 着せ替え ----
-  const wd = life.wardrobe || { collar: null, bandana: null, hat: null, shirt: null };
-  const toOutfit = (id: string | null) => {
-    const it = itemById(id);
-    return it ? { id: it.id, color: it.color, sub: it.sub } : undefined;
-  };
-  const outfit = { collar: toOutfit(wd.collar), bandana: toOutfit(wd.bandana), hat: toOutfit(wd.hat), shirt: toOutfit(wd.shirt) };
+  const outfit = outfitOf(life.wardrobe);
   // 装着したら「にあう？」とその場で一回転
   const celebrateOutfit = () => {
     const an = a.current;

@@ -1,10 +1,9 @@
 import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { ITEMS, isUnlocked } from "./dressup";
+import { emptyWardrobe, ITEMS, isUnlocked, outfitOf } from "./dressup";
 import type { Item, Slot } from "./dressup";
 import type { LifeState } from "./lifeState";
 import { LifeCorgi } from "./LifeCorgi";
-import { itemById } from "./dressup";
 
 // クローゼット：解放済みアイテムを装着/はずす。装着すると犬が「にあう？」と一回転。
 export interface ClosetSheetProps {
@@ -23,15 +22,10 @@ const SLOTS: { key: Slot; label: string }[] = [
 
 export function ClosetSheet({ life, setLife, onClose, onWear }: ClosetSheetProps) {
   const [slot, setSlot] = useState<Slot>("collar");
-  const wd = life.wardrobe || { collar: null, bandana: null, hat: null, shirt: null };
+  const wd = life.wardrobe || emptyWardrobe();
   const items = ITEMS.filter((it) => it.slot === slot);
   const unlockedCount = ITEMS.filter((it) => isUnlocked(it, life)).length;
-
-  const toOutfit = (id: string | null) => {
-    const it = itemById(id);
-    return it ? { id: it.id, color: it.color, sub: it.sub } : undefined;
-  };
-  const preview = { collar: toOutfit(wd.collar), bandana: toOutfit(wd.bandana), hat: toOutfit(wd.hat), shirt: toOutfit(wd.shirt) };
+  const preview = outfitOf(wd);
 
   const wear = (it: Item) => {
     if (!isUnlocked(it, life)) return;

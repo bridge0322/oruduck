@@ -21,7 +21,7 @@ export function parseCSV(text: string): string[][] {
 
 export const toNum = (s: unknown): number => {
   if (s == null) return NaN;
-  const n = parseFloat(String(s).replace(/[^0-9.\-]/g, ""));
+  const n = parseFloat(String(s).replace(/[^0-9.-]/g, ""));
   return isNaN(n) ? NaN : n;
 };
 

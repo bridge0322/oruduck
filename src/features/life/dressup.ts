@@ -64,6 +64,19 @@ export interface Wardrobe {
 
 export const emptyWardrobe = (): Wardrobe => ({ collar: null, bandana: null, hat: null, shirt: null });
 
+// 装着中アイテムIDを LifeCorgi の outfit 形式へ（未装着・未知IDは undefined）。
+export interface OutfitEntry { id: string; color: string; sub?: string }
+export const toOutfit = (id: string | null): OutfitEntry | undefined => {
+  const it = itemById(id);
+  return it ? { id: it.id, color: it.color, sub: it.sub } : undefined;
+};
+
+// wardrobe（null許容）から LifeCorgi に渡す outfit 一式を組み立てる。
+export function outfitOf(wd: Wardrobe | null | undefined) {
+  const w = wd || emptyWardrobe();
+  return { collar: toOutfit(w.collar), bandana: toOutfit(w.bandana), hat: toOutfit(w.hat), shirt: toOutfit(w.shirt) };
+}
+
 // 新しく解放されたアイテムの検出（前回チェック時のなつき度/連続/来訪と比較）
 export function newlyUnlocked(prev: LifeState, next: LifeState): Item[] {
   return ITEMS.filter((it) => !isUnlocked(it, prev) && isUnlocked(it, next));

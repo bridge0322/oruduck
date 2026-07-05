@@ -21,7 +21,8 @@ import { beginVisit, loadLife, saveLife } from "../life/lifeState";
 import { Onboarding } from "../life/Onboarding";
 import { DiaryScreen } from "../life/DiaryScreen";
 import { SettingsScreen } from "../life/SettingsScreen";
-import { DebugPanel, isDebug } from "../life/DebugPanel";
+import { DebugPanel } from "../life/DebugPanel";
+import { isDebug } from "../life/features";
 import { dayKey } from "../life/time";
 
 type SheetKind = "record" | "import" | null;

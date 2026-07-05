@@ -53,6 +53,9 @@ export const FEATURES: Features = {
   weeklyAward: true,
 };
 
+// ?debug=1 でデバッグパネルを表示するかどうか。
+export const isDebug = () => new URLSearchParams(location.search).get("debug") === "1";
+
 // デバッグ用の一時上書き（?debug=1 パネルから）。
 const overrides: Partial<Features> = {};
 export function setFeature<K extends keyof Features>(k: K, v: Features[K]) { overrides[k] = v; }

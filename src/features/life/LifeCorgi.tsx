@@ -3,7 +3,7 @@ import { roomParamsFor } from "../tracker/logic/roomStages";
 
 // パーツ（耳/目/口/しっぽ/前足/後足/アクセサリ）ごとにグループ化した
 // リグ構造のコーギー。props で表情・ポーズを合成する。
-// 作画は既存 RoomCorgi の犬をベースに、目・口・耳・足を差し替え可能にしたもの。
+// 作画は初期版（RoomCorgi）の犬をベースに、目・口・耳・足を差し替え可能にしたもの。
 
 export type Pose = "stand" | "sit" | "sleep" | "run" | "sniff" | "stretch";
 export type EyeState = "open" | "closed" | "happy" | "sleepy";

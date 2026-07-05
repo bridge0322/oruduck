@@ -8,10 +8,8 @@ import { setMoodOverride } from "./mood";
 import { setWeatherOverride } from "./weatherApi";
 import type { MoodKind, WeatherKind } from "./dialogues/types";
 
-// ?debug=1 のときだけ出る開発用パネル。
+// ?debug=1 のときだけ出る開発用パネル（表示判定 isDebug は features.ts）。
 // 時間帯の強制・レア演出の強制発火・なつき度の変更・各種リセットができる。
-
-export const isDebug = () => new URLSearchParams(location.search).get("debug") === "1";
 
 const fire = (detail: Record<string, unknown>) =>
   window.dispatchEvent(new CustomEvent("oruduck-debug", { detail }));
