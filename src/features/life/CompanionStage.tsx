@@ -4,7 +4,7 @@ import { LifeCorgi } from "./LifeCorgi";
 import type { Accessory, EyeState, MouthState, Pose } from "./LifeCorgi";
 import { applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, jackpotKind, treatsLeft, TREATS_PER_DAY } from "./lifeState";
 import { JackpotSlot } from "./JackpotSlot";
-import type { LifeState, RareKind } from "./lifeState";
+import type { LifeState, MemoryKind, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
 import { affectionLvOf, fillVars, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
 import type { DialogueContext } from "./dialogueEngineV2";
@@ -291,15 +291,14 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // レア演出が実際に再生されたときに、おもいで図鑑と日記へ記録する（同日同種は1回だけ）
-  const recordMemory = (kind: RareKind) => {
+  // 出来事が実際に再生されたときに、おもいで図鑑と日記へ記録する（同日同種は1回だけ）。
+  // レア演出は today.rare にも反映（日記の材料）。来訪動物（visit_*）はおもいでのみ。
+  const recordMemory = (kind: MemoryKind) => {
     setLife((s) => {
       const dup = s.memories.some((m) => m.day === today && m.kind === kind);
-      return {
-        ...s,
-        memories: dup ? s.memories : [...s.memories, { day: today, kind }],
-        today: { ...s.today, rare: kind },
-      };
+      const memories = dup ? s.memories : [...s.memories, { day: today, kind }];
+      const isRare = !kind.startsWith("visit_");
+      return { ...s, memories, ...(isRare ? { today: { ...s.today, rare: kind as RareKind } } : {}) };
     });
   };
 
@@ -408,6 +407,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       const mk = moodRef.current;
       const reaction = mk === "genki" ? "chase" : mk === "mattari" ? "watch" : mk === "amae" ? "help" : mk === "itazura" ? "sneak" : "watch";
       an.visitor = { kind, reaction, t: 0 };
+      recordMemory(`visit_${kind}` as MemoryKind);
       const lines = VISITOR_LINE[reaction];
       setBubble({ text: fillVars(lines[Math.floor(Math.random() * lines.length)], lifeRef.current), until: an.t + 4 });
       an.queueWait = 7.5;
@@ -451,6 +451,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         const mk = moodRef.current;
         const reaction = mk === "genki" ? "chase" : mk === "mattari" ? "watch" : mk === "amae" ? "help" : mk === "itazura" ? "sneak" : "watch";
         an.visitor = { kind, reaction, t: 0 };
+        recordMemory(`visit_${kind}` as MemoryKind);
         const lines = VISITOR_LINE[reaction];
         setBubble({ text: fillVars(lines[Math.floor(Math.random() * lines.length)], lifeRef.current), until: an.t + 4 });
       }

@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { Card } from "../../design-system/Card";
 import { diaryLine, monthSummary } from "./diary";
 import { clampBond } from "./lifeState";
-import type { LifeState, RareKind } from "./lifeState";
+import type { LifeState, MemoryKind } from "./lifeState";
 import { monthKey, monthOfDay, dayKey, tokyoTime } from "./time";
 import { feat } from "./features";
 import { GoalMap } from "./GoalMap";
@@ -13,13 +13,19 @@ import type { Record_ } from "../tracker/logic/persistence";
 // ひとこと日記帳＋今月のわたしたち＋おもいで図鑑＋ふれあいステータス
 // ＋お散歩マップ＋月1手紙＋交換日記＋トロフィー棚。
 
-const RARE_META: Record<RareKind, { emoji: string; label: string }> = {
+const RARE_META: Record<MemoryKind, { emoji: string; label: string }> = {
   butterfly: { emoji: "🦋", label: "ちょうちょと かけっこ" },
   star: { emoji: "🌠", label: "ながれぼしに おねがい" },
   twins: { emoji: "🐶", label: "ふたごの おともだち" },
   moon: { emoji: "🌕", label: "まんげつの とおぼえ" },
   rainbow: { emoji: "🌈", label: "にじいろダックスフンドの ひ" },
+  visit_cat: { emoji: "🐱", label: "ねこが あそびに きた" },
+  visit_bird: { emoji: "🐦", label: "ことりが あそびに きた" },
+  visit_butterfly: { emoji: "🦋", label: "ちょうちょが あそびに きた" },
 };
+
+// 未知のkind（将来追加）でも落ちないようにフォールバック。
+const metaOf = (k: MemoryKind) => RARE_META[k] || { emoji: "✨", label: "たのしい できごと" };
 
 export interface DiaryScreenProps {
   life: LifeState;
@@ -245,8 +251,8 @@ export function DiaryScreen({ life, setLife, records }: DiaryScreenProps) {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {memories.map((m, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--surface-sunken)", borderRadius: "var(--radius-md)", padding: "8px 12px" }}>
-                <span style={{ fontSize: 22 }}>{RARE_META[m.kind].emoji}</span>
-                <div style={{ flex: 1, fontFamily: "var(--font-body)", fontWeight: 700, fontSize: "var(--text-sm)", color: "var(--text-body)" }}>{RARE_META[m.kind].label}</div>
+                <span style={{ fontSize: 22 }}>{metaOf(m.kind).emoji}</span>
+                <div style={{ flex: 1, fontFamily: "var(--font-body)", fontWeight: 700, fontSize: "var(--text-sm)", color: "var(--text-body)" }}>{metaOf(m.kind).label}</div>
                 <span style={{ fontFamily: "var(--font-number)", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>{fmtDay(m.day)}</span>
               </div>
             ))}

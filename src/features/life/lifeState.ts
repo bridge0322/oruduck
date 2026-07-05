@@ -4,9 +4,12 @@ import { dayKey, diffDays } from "./time";
 
 export type RareKind = "butterfly" | "star" | "twins" | "moon" | "rainbow";
 
+// おもいで図鑑に残る出来事。レア演出に加えて、遊びに来た動物（来訪）も記録する。
+export type MemoryKind = RareKind | "visit_cat" | "visit_bird" | "visit_butterfly";
+
 export interface Memory {
   day: string;      // YYYY-MM-DD
-  kind: RareKind;
+  kind: MemoryKind;
 }
 
 // その日の出来事の記録。日記の材料になる。
