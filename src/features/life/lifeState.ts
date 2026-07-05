@@ -23,16 +23,20 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
 
 export type VisitorKind = "cat" | "bird" | "butterfly";
 
+// 呼び名につける敬称。ちゃん／くん／なし（呼び捨て）から選べる。
+export type Honorific = "chan" | "kun" | "none";
+
 export interface LifeState {
   v: number;                  // スキーマバージョン
   name: string | null;        // 呼び名（オンボーディングで設定）
+  honorific: Honorific;       // 敬称（ちゃん／くん／なし）
   onboarded: boolean;
   bond: number;               // なつき度 0-100
   bondPetToday: number;       // きょう撫でて増えたなつき度（上限10）
@@ -92,7 +96,7 @@ const emptyDay = (day: string, bond: number): DayStats => ({
 
 export function defaultLife(): LifeState {
   return {
-    v: SCHEMA_VERSION, name: null, onboarded: false,
+    v: SCHEMA_VERSION, name: null, honorific: "chan", onboarded: false,
     bond: 0, bondPetToday: 0, petTotal: 0, petThankedAt: 0, hugTotal: 0, treatTotal: 0,
     today: emptyDay(dayKey(), 0), history: [],
     visitDayCount: 0, streak: 0, lastVisitDay: null, sadReunion: false,
@@ -126,6 +130,8 @@ export function migrateLife(d: Partial<LifeState>): LifeState {
   const merged = { ...defaultLife(), ...d, v: SCHEMA_VERSION };
   // 虹色の日は廃止。保存済みの虹色状態は通常色に戻す。
   if (merged.todayRare === "rainbow") merged.todayRare = null;
+  // 敬称は3種のいずれか。未知の値は「ちゃん」に寄せる。
+  if (merged.honorific !== "chan" && merged.honorific !== "kun" && merged.honorific !== "none") merged.honorific = "chan";
   return merged;
 }
 
@@ -152,15 +158,22 @@ export function bondLevel(bond: number): 1 | 2 | 3 | 4 {
 }
 
 // 段階に応じた呼び方。{name} プレースホルダはこれで置換される。
-export function callName(s: Pick<LifeState, "name" | "bond">): string {
+export function callName(s: Pick<LifeState, "name" | "bond" | "honorific">): string {
   const lv = bondLevel(s.bond);
   const base = s.name && s.name.trim() ? s.name.trim() : null;
-  if (!base || lv === 1) return base ? `${honorific(base)}` : "きみ";
-  if (lv === 2) return honorific(base);
-  return `だいすきな${honorific(base)}`;
+  if (!base) return "きみ";
+  const named = withHonorific(base, s.honorific);
+  if (lv <= 2) return named;
+  return `だいすきな${named}`;
 }
-function honorific(name: string): string {
-  return /(ちゃん|くん|さん|さま)$/.test(name) ? name : `${name}ちゃん`;
+
+// 呼び名に敬称をつける。すでに敬称がついている名前には二重付けしない。
+export function withHonorific(name: string, h: Honorific = "chan"): string {
+  const n = name.trim();
+  if (/(ちゃん|くん|さん|さま)$/.test(n)) return n; // 入力に敬称が含まれていればそのまま
+  if (h === "kun") return `${n}くん`;
+  if (h === "none") return n;
+  return `${n}ちゃん`;
 }
 
 // アプリを開いたときの来訪処理。日をまたいでいたら昨日までの記録を確定し、

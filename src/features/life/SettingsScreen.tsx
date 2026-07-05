@@ -6,8 +6,8 @@ import { SegmentedControl } from "../../design-system/SegmentedControl";
 import { Switch } from "../../design-system/Switch";
 import { feat } from "./features";
 import { configureSound, playSound } from "./sound";
-import { DEFAULT_HOUSE_THRESHOLDS } from "./lifeState";
-import type { AnimLevel, LifeState } from "./lifeState";
+import { DEFAULT_HOUSE_THRESHOLDS, withHonorific } from "./lifeState";
+import type { AnimLevel, Honorific, LifeState } from "./lifeState";
 
 // せってい：よびな・毎月の積立日・アニメーションの強さ。
 export interface SettingsScreenProps {
@@ -35,13 +35,27 @@ export function SettingsScreen({ life, setLife }: SettingsScreenProps) {
       <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>🐶 よびな</div>
         <div style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", lineHeight: 1.6 }}>
-          ダックスフンドが よぶ なまえ。「ちゃん」は かってに つくよ。
+          ダックスフンドが よぶ なまえ。けいしょうは「ちゃん」「くん」「なし（呼び捨て）」から えらべるよ。
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="れい：ゆうり" maxLength={10}
             style={{ flex: 1, minWidth: 0, padding: "12px 14px", borderRadius: "var(--radius-md)", border: "2px solid var(--border-strong)", fontFamily: "var(--font-body)", fontSize: "var(--text-md)", background: "var(--surface-card)", outline: "none" }} />
           <Button variant="primary" size="md" onClick={saveName}>{saved ? "ほぞんした！" : "ほぞん"}</Button>
         </div>
+        <SegmentedControl
+          value={life.honorific}
+          onChange={(v) => setLife((s) => ({ ...s, honorific: v as Honorific }))}
+          options={[
+            { value: "chan", label: "ちゃん" },
+            { value: "kun", label: "くん" },
+            { value: "none", label: "なし" },
+          ]}
+        />
+        {(name.trim() || life.name) && (
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-sm)", color: "var(--text-brand)", textAlign: "center" }}>
+            「{withHonorific((name.trim() || life.name || ""), life.honorific)}」って よぶね！
+          </div>
+        )}
       </Card>
 
       <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
