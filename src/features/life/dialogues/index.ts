@@ -19,6 +19,7 @@ import { rare } from "./rare";
 import { reactions } from "./reactions";
 import { bonus } from "./bonus";
 import { bonus2 } from "./bonus2";
+import { bonus3 } from "./bonus3";
 import type { Line } from "./types";
 
 export const ALL_LINES: Line[] = [
@@ -38,6 +39,7 @@ export const ALL_LINES: Line[] = [
   ...reactions,
   ...bonus,
   ...bonus2,
+  ...bonus3,
 ];
 
 // カテゴリごとの本数（デバッグ表示・検品用）

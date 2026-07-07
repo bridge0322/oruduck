@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { LifeCorgi } from "./LifeCorgi";
 import type { Accessory, EyeState, MouthState, Pose } from "./LifeCorgi";
-import { applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, jackpotKind, treatsLeft, TREATS_PER_DAY } from "./lifeState";
+import { applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, jackpotKind, SLEEP_STYLES, treatsLeft, TREATS_PER_DAY } from "./lifeState";
 import { JackpotSlot } from "./JackpotSlot";
 import type { LifeState, MemoryKind, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
@@ -95,7 +95,11 @@ const newAnim = (skipEnter: boolean): Anim => ({
   ball: null, ballCombo: 0, tug: null, sleepTalkNext: 0, visitor: null,
 });
 
-const VISITOR_EMOJI: Record<VisitorKind, string> = { cat: "🐱", bird: "🐦", butterfly: "🦋" };
+const VISITOR_EMOJI: Record<VisitorKind, string> = {
+  cat: "🐱", bird: "🐦", butterfly: "🦋", squirrel: "🐿️", hedgehog: "🦔", frog: "🐸", ladybug: "🐞",
+};
+// 空を飛ぶ来訪者（高い位置でふわふわ）。それ以外は地面。ことりだけ大きく跳ねる。
+const VISITOR_FLYERS = new Set<VisitorKind>(["butterfly", "ladybug"]);
 const VISITOR_LINE: Record<string, string[]> = {
   chase: ["まてまて〜！", "おいかけっこ しよ！", "つかまえるぞ〜！"],
   watch: ["だれか きたよ…じー", "おきゃくさん かな？", "なにしてるのかな…"],
@@ -255,13 +259,11 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     else if (r < 0.041 && night) rare = "star";
     else if (r < 0.091) rare = "butterfly";
     else if (isFullMoon() && night) rare = "moon";
-    // 遊びに来る動物（1日1回）：ネコ15%/小鳥15%/ちょうちょ10%
+    // 遊びに来る動物（1日1回・約55%で来訪）。7種からまんべんなく。
     let visitor: VisitorKind | null = null;
-    if (feat("visitors")) {
-      const rv = Math.random();
-      if (rv < 0.15) visitor = "cat";
-      else if (rv < 0.30) visitor = "bird";
-      else if (rv < 0.40) visitor = "butterfly";
+    if (feat("visitors") && Math.random() < 0.55) {
+      const kinds: VisitorKind[] = ["cat", "bird", "butterfly", "squirrel", "hedgehog", "frog", "ladybug"];
+      visitor = kinds[Math.floor(Math.random() * kinds.length)];
     }
     setLife((s) => ({ ...s, rareRolledDay: today, todayRare: rare, visitorRolledDay: today, todayVisitor: visitor }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -299,9 +301,13 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   // レア演出は today.rare にも反映（日記の材料）。来訪動物（visit_*）はおもいでのみ。
   const recordMemory = (kind: MemoryKind) => {
     setLife((s) => {
-      const dup = s.memories.some((m) => m.day === today && m.kind === kind);
+      // 寝相はコレクション（種類ごと1回・初回の日付を残す）。それ以外は同日同種1回。
+      const isSleep = kind.startsWith("sleep_");
+      const dup = isSleep
+        ? s.memories.some((m) => m.kind === kind)
+        : s.memories.some((m) => m.day === today && m.kind === kind);
       const memories = dup ? s.memories : [...s.memories, { day: today, kind }];
-      const isRare = !kind.startsWith("visit_");
+      const isRare = !kind.includes("_"); // レア5種は "_" を含まない
       return { ...s, memories, ...(isRare ? { today: { ...s.today, rare: kind as RareKind } } : {}) };
     });
   };
@@ -982,6 +988,13 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const petting = an.t < an.petUntil || an.fsm === "hug";
   const sleeping = an.fsm === "sleep";
   const late = slot === "late";
+  // その日の寝相（夜ごとに変わる。日付で決めるので同じ日は同じ寝相）。
+  const sleepIdx = [...today].reduce((n, c) => n + c.charCodeAt(0), 0) % SLEEP_STYLES.length;
+  // 寝たら、その寝相を寝相コレクション（おもいで図鑑）に記録する。
+  useEffect(() => {
+    if (sleeping) recordMemory(`sleep_${SLEEP_STYLES[sleepIdx]}` as MemoryKind);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sleeping, sleepIdx]);
 
   // 引っ張りっこの傾き（踏ん張り／のけぞり／前のめり）
   const tugRot = an.tug ? (an.tug.phase === "pull" ? -9 + Math.sin(an.t * 20) * 3 : an.tug.phase === "win" ? -18 : 14) : 0;
@@ -1051,7 +1064,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const wagAmp = sleeping ? 2 : an.fsm === "trick" ? 18 : petting || an.tailSpeedMul > 1.2 ? 16 : 10;
   const tailWag = Math.sin(an.tailPhase * Math.PI) * wagAmp;
   const shake = (an.shakeUntil > an.t ? Math.sin(an.t * 26) * 7 : 0) + trickShake;
-  const accessory: Accessory = late ? "nightcap" : weekend ? "bandana" : "none";
+  const accessory: Accessory = weekend ? "bandana" : "none";
   const windSway = weather === "wind" && !isMin ? Math.sin(an.t * 3) * 3 : 0; // 強風で毛・体が揺れる
   const houseThresholds = life.houseThresholds && life.houseThresholds.length ? life.houseThresholds : DEFAULT_HOUSE_THRESHOLDS;
   const houseLevel = feat("houseUpgrade") ? houseThresholds.filter((t) => principal >= t).length : -1;
@@ -1141,7 +1154,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
 
       {/* 遊びに来る動物 */}
       {an.visitor && (
-        <div style={{ position: "absolute", left: `calc(50% + ${(Math.cos(an.visitor.t * 0.9) * 90 - (an.visitor.t > 6 ? (an.visitor.t - 6) * 180 : 0))}px)`, bottom: an.visitor.kind === "butterfly" ? `${height * 0.44 + Math.sin(an.visitor.t * 3) * 24}px` : `${18 + Math.abs(Math.sin(an.visitor.t * 5)) * (an.visitor.kind === "bird" ? 30 : 6)}px`, fontSize: an.visitor.kind === "butterfly" ? 22 : 26, transform: `scaleX(${Math.sin(an.visitor.t * 0.9) < 0 ? 1 : -1})`, pointerEvents: "none", zIndex: 4, transition: "none" }}>
+        <div style={{ position: "absolute", left: `calc(50% + ${(Math.cos(an.visitor.t * 0.9) * 90 - (an.visitor.t > 6 ? (an.visitor.t - 6) * 180 : 0))}px)`, bottom: VISITOR_FLYERS.has(an.visitor.kind) ? `${height * 0.44 + Math.sin(an.visitor.t * 3) * 24}px` : `${18 + Math.abs(Math.sin(an.visitor.t * 5)) * (an.visitor.kind === "bird" ? 30 : 6)}px`, fontSize: VISITOR_FLYERS.has(an.visitor.kind) ? 22 : 26, transform: `scaleX(${Math.sin(an.visitor.t * 0.9) < 0 ? 1 : -1})`, pointerEvents: "none", zIndex: 4, transition: "none" }}>
           {VISITOR_EMOJI[an.visitor.kind]}
         </div>
       )}
@@ -1187,7 +1200,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
             tailWag={tailWag} eyes={eyes} mouth={mouth}
             earTwitchL={an.earLT > 0 ? Math.sin(an.t * 40) * 8 : 0}
             earDown={an.earDownUntil > an.t}
-            lift={an.lift}
+            lift={an.lift} sleepStyle={sleepIdx}
             accessory={accessory} outfit={outfit} raincoat={weather === "rain" && !cloudy}
             proud={an.proudUntil > an.t} blush={petting}
             silhouette={moonActive}

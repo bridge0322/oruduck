@@ -23,6 +23,7 @@ export interface LifeCorgiProps {
   earDown?: boolean;    // 耳ペタン
   headTilt?: number;    // 首かしげ(deg)
   lift?: number;        // ジャンプの高さ(px)。体だけ持ち上げ、影は地面に残す
+  sleepStyle?: number;  // 寝相（0..4）。sleep ポーズのときの寝姿を変える
   pawLift?: { l?: number; r?: number }; // 前足を上げる回転角(deg)。お手／おかわり／ハイタッチ用
   accessory?: Accessory;
   outfit?: { collar?: OutfitItem; bandana?: OutfitItem; hat?: OutfitItem; shirt?: OutfitItem }; // 着せ替え装着中
@@ -34,6 +35,15 @@ export interface LifeCorgiProps {
 
 const OL = "#7A5230", TAN = "#E3A857", CREAM = "#FBEAD2", INNER = "#D89243",
   EARSH = "#C77F35", DARK = "#3A2418", TONGUE = "#F08CA0", BLUSH = "#F3C2B6";
+
+// 寝相コレクション（SLEEP_STYLES と同じ並び）：まるまり／ぺたんこ／よこむき／まんまる／だらり。
+const SLEEP_XF = [
+  "translate(0 52) scale(1 0.78)",
+  "translate(0 66) scale(1.16 0.58)",
+  "translate(7 54) scale(1 0.8) rotate(-15 200 320)",
+  "translate(0 58) scale(0.9 0.9)",
+  "translate(-7 62) scale(1.1 0.66) rotate(9 200 320)",
+];
 
 export function LifeCorgi(p: LifeCorgiProps) {
   const uid = useId().replace(/[:]/g, "");
@@ -70,7 +80,7 @@ export function LifeCorgi(p: LifeCorgiProps) {
 
   // ポーズごとの全体変形
   let bodyXf = "";
-  if (sleeping) bodyXf = "translate(0 52) scale(1 0.78)";
+  if (sleeping) bodyXf = SLEEP_XF[p.sleepStyle ?? 0] || SLEEP_XF[0];
   else if (stretching) bodyXf = "rotate(-8 200 340)";
   else if (p.proud) bodyXf = "rotate(-5 200 340)";
   let headXf = "";

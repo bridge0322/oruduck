@@ -4,8 +4,19 @@ import { dayKey, diffDays } from "./time";
 
 export type RareKind = "butterfly" | "star" | "twins" | "moon" | "rainbow";
 
-// おもいで図鑑に残る出来事。レア演出に加えて、遊びに来た動物（来訪）も記録する。
-export type MemoryKind = RareKind | "visit_cat" | "visit_bird" | "visit_butterfly";
+// 遊びに来る動物。ねこ・ことりに加え、りす・はりねずみ・かえる・てんとうむしも来る。
+export type VisitorKind = "cat" | "bird" | "butterfly" | "squirrel" | "hedgehog" | "frog" | "ladybug";
+
+// 寝相コレクション。夜ごとに変わり、はじめて見た寝相はおもいで図鑑に集まる。
+export const SLEEP_STYLES = ["curl", "flat", "side", "ball", "loose"] as const;
+export type SleepStyle = typeof SLEEP_STYLES[number];
+export const SLEEP_LABEL: Record<SleepStyle, string> = {
+  curl: "まるまり ねんね", flat: "ぺたんこ ねんね", side: "よこむき ねんね",
+  ball: "まんまる ねんね", loose: "だらり ねんね",
+};
+
+// おもいで図鑑に残る出来事。レア演出・遊びに来た動物（来訪）・寝相を記録する。
+export type MemoryKind = RareKind | `visit_${VisitorKind}` | `sleep_${SleepStyle}`;
 
 export interface Memory {
   day: string;      // YYYY-MM-DD
@@ -30,8 +41,6 @@ export const SCHEMA_VERSION = 10;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
-
-export type VisitorKind = "cat" | "bird" | "butterfly";
 
 // 呼び名につける敬称。ちゃん／くん／なし（呼び捨て）から選べる。
 export type Honorific = "chan" | "kun" | "none";

@@ -22,6 +22,15 @@ const RARE_META: Record<MemoryKind, { emoji: string; label: string }> = {
   visit_cat: { emoji: "🐱", label: "ねこが あそびに きた" },
   visit_bird: { emoji: "🐦", label: "ことりが あそびに きた" },
   visit_butterfly: { emoji: "🦋", label: "ちょうちょが あそびに きた" },
+  visit_squirrel: { emoji: "🐿️", label: "りすが あそびに きた" },
+  visit_hedgehog: { emoji: "🦔", label: "はりねずみが あそびに きた" },
+  visit_frog: { emoji: "🐸", label: "かえるが あそびに きた" },
+  visit_ladybug: { emoji: "🐞", label: "てんとうむしが あそびに きた" },
+  sleep_curl: { emoji: "😴", label: "まるまり ねんね" },
+  sleep_flat: { emoji: "😴", label: "ぺたんこ ねんね" },
+  sleep_side: { emoji: "😴", label: "よこむき ねんね" },
+  sleep_ball: { emoji: "😴", label: "まんまる ねんね" },
+  sleep_loose: { emoji: "😴", label: "だらり ねんね" },
 };
 
 // 未知のkind（将来追加）でも落ちないようにフォールバック。
