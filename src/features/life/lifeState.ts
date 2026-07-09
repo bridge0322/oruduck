@@ -37,7 +37,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -98,6 +98,9 @@ export interface LifeState {
   lettersOpened: string[];               // 開封した月の手紙 "YYYY-MM"
   awards: { week: string; kind: string; label: string }[]; // 週間表彰の履歴
   lastAwardWeek: string | null;          // 最後に表彰した週
+  // ---- v11: きょうのおねがい（1日ミッション） ----
+  playedDay: string | null;              // きょう遊んだ（ボール/芸/つなひき/ブラシ）最後の日
+  missionCheeredDay: string | null;      // ミッション達成を犬が喜んだ最後の日
 }
 
 const KEY = "oruduck_life_v1";
@@ -124,7 +127,38 @@ export function defaultLife(): LifeState {
     jackpotShownValue: 0,
     goalAmount: 1000000, goalReached: [], diaryReplies: {}, diaryReplyThanksDay: null,
     lettersOpened: [], awards: [], lastAwardWeek: null,
+    playedDay: null, missionCheeredDay: null,
   };
+}
+
+// 「きょうのおねがい」= 犬から毎日ねだる3つのお世話。既存の1日カウンタから導出する
+// ので専用の保存領域は要らない（撫でた回数・遊んだか・おやつ）。
+export interface MissionTask {
+  key: "pet" | "play" | "treat";
+  label: string;
+  emoji: string;
+  done: number;
+  goal: number;
+}
+
+export const PET_MISSION_GOAL = 5;
+
+export function dailyMission(s: LifeState): MissionTask[] {
+  const today = dayKey();
+  return [
+    { key: "pet", label: "なでなで", emoji: "🖐️", done: Math.min(s.today.pets, PET_MISSION_GOAL), goal: PET_MISSION_GOAL },
+    { key: "play", label: "あそぶ", emoji: "🎾", done: s.playedDay === today ? 1 : 0, goal: 1 },
+    { key: "treat", label: "おやつ", emoji: "🦴", done: Math.min(s.today.treats, 1), goal: 1 },
+  ];
+}
+
+export const missionCleared = (s: LifeState) => dailyMission(s).every((t) => t.done >= t.goal);
+export const missionCount = (s: LifeState) => dailyMission(s).filter((t) => t.done >= t.goal).length;
+
+// きょう遊んだ印をつける（ボール・芸・つなひき・ブラシ共通）
+export function markPlayed(s: LifeState): LifeState {
+  const today = dayKey();
+  return s.playedDay === today ? s : { ...s, playedDay: today };
 }
 
 // ゾロ目（全桁同じ）／キリ番（100万円単位）の判定

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { LifeCorgi } from "./LifeCorgi";
 import type { Accessory, EyeState, MouthState, Pose } from "./LifeCorgi";
-import { applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, jackpotKind, SLEEP_STYLES, treatsLeft, TREATS_PER_DAY } from "./lifeState";
+import { applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, jackpotKind, markPlayed, SLEEP_STYLES, treatsLeft, TREATS_PER_DAY } from "./lifeState";
 import { JackpotSlot } from "./JackpotSlot";
 import type { LifeState, MemoryKind, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
@@ -711,7 +711,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
             an.ballCombo = combo;
             say("ball", undefined, 3600);
           }
-          setLife((s) => (combo > (s.ballBestCombo || 0) ? { ...s, ballBestCombo: combo } : s));
+          setLife((s) => markPlayed(combo > (s.ballBestCombo || 0) ? { ...s, ballBestCombo: combo } : s));
         }
       }
     }
@@ -868,7 +868,9 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       const nc = c + 1;
       if (nc >= 20) {
         if (lifeRef.current.lastBrushDay !== today) {
-          setLife((s) => ({ ...s, bond: clampBond(s.bond + 1), lastBrushDay: today, today: { ...s.today, bond: clampBond(s.bond + 1) } }));
+          setLife((s) => markPlayed({ ...s, bond: clampBond(s.bond + 1), lastBrushDay: today, today: { ...s.today, bond: clampBond(s.bond + 1) } }));
+        } else {
+          setLife(markPlayed);
         }
         say("brush", undefined, 4200);
         spawnHearts(2, false);
@@ -907,7 +909,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         setTrickToast(`あたらしい げい：「${nextBefore.name}」を おぼえた！`);
         setTimeout(() => setTrickToast(null), 3200);
       }
-      return { ...s, trickMastery: m };
+      return markPlayed({ ...s, trickMastery: m });
     });
   };
 
@@ -919,6 +921,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     an.lastInteract = an.t;
     an.tug = { t: 0, dur: 2 + Math.random() * 2, phase: "pull" };
     setBubble({ text: "つなひき、しょうぶ！", until: an.t + 1.6 });
+    setLife(markPlayed);
   };
 
   // ---- ボール遊び（フリックで投げる） ----

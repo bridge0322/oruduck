@@ -20,6 +20,7 @@ import type { ValueDelta } from "../life/CompanionStage";
 import { beginVisit, loadLife, saveLife } from "../life/lifeState";
 import { Onboarding } from "../life/Onboarding";
 import { DiaryScreen } from "../life/DiaryScreen";
+import { MissionCard } from "../life/MissionCard";
 import { SettingsScreen } from "../life/SettingsScreen";
 import { DebugPanel } from "../life/DebugPanel";
 import { isDebug } from "../life/features";
@@ -122,6 +123,7 @@ export function App() {
             {cur ? (
               <>
                 <Hero cur={cur} peak={peak} scene={stage} />
+                <MissionCard life={life} setLife={setLife} />
                 <DailyFeedCard canFeed={canFeed} streak={streak} onFeed={feed} />
                 <BalanceCard cur={cur} />
               </>
@@ -133,6 +135,7 @@ export function App() {
                     まだ記録がありません。<br />「記録する」か「取り込む」で、最初の金額を入力してね 🐾
                   </div>
                 </Card>
+                <MissionCard life={life} setLife={setLife} />
                 <DailyFeedCard canFeed={canFeed} streak={streak} onFeed={feed} />
               </>
             )}
