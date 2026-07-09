@@ -34,6 +34,47 @@ export interface RoomParams {
   cheek: number;
 }
 
+// ¥100万（最終成長ステージ）以降の「生涯ステージ」。ここから先は打ち止めにせず、
+// 一定額ごとに新しい称号が無限に解禁される。体は成犬のままで、称号ときずなが育つ。
+export interface StageInfo {
+  title: string;      // 現在の称号
+  curAmount: number;  // 現在ステージの基準額
+  nextAmount: number; // 次ステージの到達額（常に存在＝無限進行）
+  nextTitle: string;  // 次の称号
+  badge: RoomStage["badge"];
+}
+
+const NAMED_LIFE_STAGES: { amount: number; title: string; badge: RoomStage["badge"] }[] = [
+  { amount: 1000000, title: "ずっと一緒！", badge: "halo" },
+  { amount: 1500000, title: "たよれる相棒", badge: "halo" },
+  { amount: 2000000, title: "おうちの主", badge: "halo" },
+  { amount: 3000000, title: "みんなの人気者", badge: "crown" },
+  { amount: 5000000, title: "でんせつの犬", badge: "crown" },
+  { amount: 7000000, title: "まちの守り神", badge: "halo" },
+  { amount: 10000000, title: "しあわせの化身", badge: "halo" },
+];
+const HALL_UNIT = 10000000; // ¥1000万ごとに殿堂入りの世代が上がる
+
+// 積立額に応じた生涯ステージ。¥100万未満では null（通常の成長ステージを使う）。
+export function endlessStage(amount: number): StageInfo | null {
+  if (amount < NAMED_LIFE_STAGES[0].amount) return null;
+  // 名前つきステージの範囲内
+  let i = 0;
+  for (let k = 0; k < NAMED_LIFE_STAGES.length; k++) if (amount >= NAMED_LIFE_STAGES[k].amount) i = k;
+  if (i < NAMED_LIFE_STAGES.length - 1) {
+    const cur = NAMED_LIFE_STAGES[i], nx = NAMED_LIFE_STAGES[i + 1];
+    return { title: cur.title, curAmount: cur.amount, nextAmount: nx.amount, nextTitle: nx.title, badge: cur.badge };
+  }
+  // ¥1000万以降：殿堂入り。HALL_UNIT ごとに世代を重ねる無限ステージ。
+  const steps = Math.floor((amount - HALL_UNIT) / HALL_UNIT); // 0=¥1000万
+  const curAmount = HALL_UNIT + steps * HALL_UNIT;
+  return {
+    title: steps === 0 ? "しあわせの化身" : `殿堂入り ${steps}世`,
+    curAmount, nextAmount: curAmount + HALL_UNIT,
+    nextTitle: `殿堂入り ${steps + 1}世`, badge: "halo",
+  };
+}
+
 export function roomParamsFor(level: number): RoomParams {
   const t = (level - 1) / 11;
   const lerp = (a: number, b: number) => a + (b - a) * t;
