@@ -7,6 +7,7 @@ import { JackpotSlot } from "./JackpotSlot";
 import type { LifeState, MemoryKind, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
 import { affectionLvOf, fillVars, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
+import { pickMemoryLine } from "./memoryLines";
 import type { DialogueContext } from "./dialogueEngineV2";
 import { feat } from "./features";
 import { outfitOf } from "./dressup";
@@ -227,6 +228,10 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       setBubble({ text: "いちばんのり！ きょうも あえて うれしい！", until: a.current.t + dur / 1000 });
       return;
     }
+    if (feat("memoryTalk") && !firstVisitToday && Math.random() < 0.12) {
+      const mem = pickMemoryLine(s);
+      if (mem) { showLine(mem, dur, false); return; }
+    }
     const ctx = dctx();
     const cats = ["greet", "greet", "weekday", "season", "knowledge", "affection", "murmur"];
     if (ctx.mood) cats.push("mood", "mood");
@@ -240,6 +245,11 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   // 放置中のひとりごと：独り言を中心に、豆知識・なつき度・季節・天気から。
   const sayIdle = (dur: number) => {
     const s = lifeRef.current;
+    // ときどき、これまでの積み重ねをふり返る「記憶する会話」を挟む。
+    if (feat("memoryTalk") && Math.random() < 0.2) {
+      const mem = pickMemoryLine(s);
+      if (mem) { showLine(mem, dur, false); return; }
+    }
     const ctx = dctx();
     let cats = ["murmur", "murmur", "knowledge", "affection", "season"];
     if (ctx.mood) cats.push("mood", "mood");

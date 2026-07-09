@@ -27,6 +27,8 @@ export interface Features {
   tomorrowPreview: boolean;  // 明日の予告
   exchangeDiary: boolean;    // 交換日記
   weeklyAward: boolean;      // 週1がんばったで賞
+  // 記憶
+  memoryTalk: boolean;       // 思い出をふり返る会話
 }
 
 export const FEATURES: Features = {
@@ -51,6 +53,7 @@ export const FEATURES: Features = {
   tomorrowPreview: true,
   exchangeDiary: true,
   weeklyAward: true,
+  memoryTalk: true,
 };
 
 // ?debug=1 でデバッグパネルを表示するかどうか。
