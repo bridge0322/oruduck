@@ -37,7 +37,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -101,6 +101,8 @@ export interface LifeState {
   // ---- v11: きょうのおねがい（1日ミッション） ----
   playedDay: string | null;              // きょう遊んだ（ボール/芸/つなひき/ブラシ）最後の日
   missionCheeredDay: string | null;      // ミッション達成を犬が喜んだ最後の日
+  // ---- v12: 不在シミュレーション（るすばん日記） ----
+  pendingAbsence: number | null;         // 前回来訪からの空き日数（2以上で、おかえりカードで消費）
 }
 
 const KEY = "oruduck_life_v1";
@@ -128,7 +130,39 @@ export function defaultLife(): LifeState {
     goalAmount: 1000000, goalReached: [], diaryReplies: {}, diaryReplyThanksDay: null,
     lettersOpened: [], awards: [], lastAwardWeek: null,
     playedDay: null, missionCheeredDay: null,
+    pendingAbsence: null,
   };
+}
+
+// るすばん日記：留守中の1日ごとの過ごし方。空き日数と犬の名前で決まり、
+// 同じ不在なら毎回おなじ内容になる（seed=空き日数）。さみしさは日数で強まる。
+const ABSENCE_ACTS = [
+  "まどの そとを みて、{name}を まってたよ",
+  "おきにいりの ばしょで まるくなって おひるね",
+  "ボールを ころがして ひとりあそび してた",
+  "ごはんの じかん、まだかな〜って そわそわ",
+  "ゆめのなかで {name}と かけっこ してた",
+  "ドアの おとが するたび、きたかも！って みにいった",
+  "ひなたぼっこ しながら {name}の こと かんがえてた",
+  "おもちゃを ぜんぶ ならべて てんけん してた",
+];
+const ABSENCE_LONELY = [
+  "ちょっぴり さみしくて、くんくん ないちゃった",
+  "まくらに くっついて、{name}の におい さがしてた",
+  "ずっと ドアの まえで まってた…",
+];
+
+export function absenceDiary(name: string, days: number): string[] {
+  const n = Math.max(2, Math.min(days, 7));
+  const out: string[] = [];
+  for (let i = 0; i < n; i++) {
+    // 3日以上あくと、後半にさみしいエピソードを混ぜる
+    const lonely = days >= 3 && i >= n - 2 && i % 2 === 1;
+    const pool = lonely ? ABSENCE_LONELY : ABSENCE_ACTS;
+    const pick = pool[(i * 3 + days) % pool.length];
+    out.push(pick.replaceAll("{name}", name));
+  }
+  return out;
 }
 
 // 「きょうのおねがい」= 犬から毎日ねだる3つのお世話。既存の1日カウンタから導出する
@@ -243,6 +277,7 @@ export function beginVisit(s: LifeState, now = Date.now()): LifeState {
 
   if (next.lastVisitDay) {
     const gap = diffDays(today, next.lastVisitDay);
+    if (gap >= 2) next.pendingAbsence = gap; // るすばん日記を出す
     if (gap >= 3) {
       next.bond = clampBond(next.bond - 5);
       next.sadReunion = true;

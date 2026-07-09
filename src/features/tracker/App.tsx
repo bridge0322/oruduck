@@ -21,6 +21,7 @@ import { beginVisit, loadLife, saveLife } from "../life/lifeState";
 import { Onboarding } from "../life/Onboarding";
 import { DiaryScreen } from "../life/DiaryScreen";
 import { MissionCard } from "../life/MissionCard";
+import { AbsenceCard } from "../life/AbsenceCard";
 import { SettingsScreen } from "../life/SettingsScreen";
 import { DebugPanel } from "../life/DebugPanel";
 import { isDebug } from "../life/features";
@@ -120,6 +121,7 @@ export function App() {
       <main style={{ flex: 1, overflowY: "auto", padding: "0 20px 24px" }}>
         {tab === "home" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {life.pendingAbsence != null && life.pendingAbsence >= 2 && <AbsenceCard life={life} setLife={setLife} />}
             {cur ? (
               <>
                 <Hero cur={cur} peak={peak} scene={stage} />
