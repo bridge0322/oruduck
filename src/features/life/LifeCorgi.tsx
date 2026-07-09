@@ -256,9 +256,11 @@ export function LifeCorgi(p: LifeCorgiProps) {
             </g>
           )}
         </g>
-        {/* 首輪（頭より手前・あごのすぐ下の首もとに、細く巻く。鈴なし） */}
+        {/* 首輪（頭より手前・あごのすぐ下の首もとに、細く巻く。鈴なし）。
+            寝るときは頭とあごが前に倒れるので、首輪も頭と同じ変形(headXf)を受けて
+            首もとに着いていくようにする（つけないと首輪だけ立ち姿の位置に取り残される）。 */}
         {!p.silhouette && p.outfit?.collar && (
-          <g id={`collar-${uid}`} transform={`translate(0 ${sitDrop}) translate(200 250) scale(${par.bodyScale} ${par.bodyScale * par.bodyStretch}) translate(-200 -250)`}>
+          <g id={`collar-${uid}`} transform={`${sleeping ? headXf : ""} translate(0 ${sitDrop}) translate(200 250) scale(${par.bodyScale} ${par.bodyScale * par.bodyStretch}) translate(-200 -250)`}>
             <path d="M156 233 Q200 244 244 233 Q244 238 200 248 Q156 238 156 233 Z" fill={p.outfit.collar.color} stroke={olStroke} strokeWidth="4" strokeLinejoin="round" />
           </g>
         )}
