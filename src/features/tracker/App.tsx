@@ -68,11 +68,11 @@ export function App() {
   const prm = useMemo(() => typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches, []);
   const animLevel = life.animLevel ?? (prm ? "min" : "full");
 
-  const addRecord = ({ principal, value }: { principal: number | null; value: number }) => {
+  const addRecord = ({ principal, value, units, nav }: { principal: number | null; value: number; units?: number; nav?: number }) => {
     setData((d) => {
       const prev = d.records.length ? d.records[d.records.length - 1] : null;
       const p = principal == null ? (prev ? prev.principal : value) : principal;
-      return { ...d, records: [...d.records, { t: Date.now(), principal: p, value }] };
+      return { ...d, records: [...d.records, { t: Date.now(), principal: p, value, units, nav }] };
     });
     setSheet(null);
   };

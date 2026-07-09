@@ -2,6 +2,10 @@ export interface Record_ {
   t: number;
   principal: number;
   value: number;
+  // 口数モードで記録した場合の内訳。評価額は units × nav / 10000 で自動計算される。
+  // 保有口数はほぼ変わらないので、日々の更新は基準価額(nav)だけ書き換えれば済む＝OCR不要。
+  units?: number;   // 保有口数
+  nav?: number;     // 基準価額（1万口あたり）
 }
 
 export interface Feast {
