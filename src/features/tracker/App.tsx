@@ -17,11 +17,12 @@ import { roomLevelFromAmount } from "./logic/roomStages";
 // ---- 生きているコーギー レイヤー ----
 import { CompanionStage } from "../life/CompanionStage";
 import type { ValueDelta } from "../life/CompanionStage";
-import { beginVisit, loadLife, saveLife } from "../life/lifeState";
+import { beginVisit, callName, loadLife, saveLife } from "../life/lifeState";
 import { Onboarding } from "../life/Onboarding";
 import { DiaryScreen } from "../life/DiaryScreen";
 import { MissionCard } from "../life/MissionCard";
 import { AbsenceCard } from "../life/AbsenceCard";
+import { RecordNudge } from "./RecordNudge";
 import { SettingsScreen } from "../life/SettingsScreen";
 import { DebugPanel } from "../life/DebugPanel";
 import { isDebug } from "../life/features";
@@ -58,6 +59,9 @@ export function App() {
   const [feastFx, setFeastFx] = useState<FeastFx | null>(null);
   const cur = data.records.length ? data.records[data.records.length - 1] : null;
   const peak = peakOf(data.records);
+  // 前回の評価額を記録してからの日数。3日以上あいたら、そっと記録をうながす。
+  const daysSinceRecord = cur ? Math.floor((Date.now() - cur.t) / 86400000) : 0;
+  const showNudge = cur != null && daysSinceRecord >= 3;
   const canFeed = canFeedToday(data.lastFed);
   const streak = feedStreak(data.feasts);
 
@@ -122,6 +126,7 @@ export function App() {
         {tab === "home" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {life.pendingAbsence != null && life.pendingAbsence >= 2 && <AbsenceCard life={life} setLife={setLife} />}
+            {showNudge && <RecordNudge days={daysSinceRecord} name={callName(life)} onRecord={() => setSheet("record")} />}
             {cur ? (
               <>
                 <Hero cur={cur} peak={peak} scene={stage} />
