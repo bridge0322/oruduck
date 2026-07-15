@@ -8,6 +8,7 @@ import { monthKey, monthOfDay, dayKey, tokyoTime } from "./time";
 import { feat } from "./features";
 import { GoalMap } from "./GoalMap";
 import { GrowthAlbum } from "./GrowthAlbum";
+import { PhotoBooth } from "./PhotoBooth";
 import { metaOf } from "./memoryMeta";
 import { letterText, prevMonthKey } from "./letters";
 import { goalForecast } from "../tracker/logic/pace";
@@ -96,6 +97,9 @@ export function DiaryScreen({ life, setLife, records }: DiaryScreenProps) {
           </div>
         ))}
       </Card>
+
+      {/* きねん撮影 */}
+      <PhotoBooth life={life} records={records} />
 
       {/* 成長アルバム（この子との歩みタイムライン） */}
       <GrowthAlbum life={life} records={records} />
