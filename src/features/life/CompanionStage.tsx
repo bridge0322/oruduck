@@ -13,6 +13,7 @@ import type { DialogueContext } from "./dialogueEngineV2";
 import { feat } from "./features";
 import { outfitOf } from "./dressup";
 import { ClosetSheet } from "./ClosetSheet";
+import { TreasureSheet } from "./TreasureSheet";
 import { TrickSheet } from "./TrickSheet";
 import { nextLockedTrick, totalMastery } from "./tricks";
 import type { Trick } from "./tricks";
@@ -128,6 +129,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const [closet, setCloset] = useState(false);
   const [brushMode, setBrushMode] = useState(false);
   const [tricks, setTricks] = useState(false);
+  const [hunt, setHunt] = useState(false);
   const [trickToast, setTrickToast] = useState<string | null>(null);
   const [milestone, setMilestone] = useState<number | null>(null); // 節目アニメ表示中の到達日数
   const [jackpot, setJackpot] = useState<{ amount: number; kind: "zorome" | "kiriban" } | null>(null);
@@ -1346,6 +1348,26 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
           style={{ position: "absolute", top: 192, left: 8, width: 40, height: 40, borderRadius: "50%", border: "2px solid #F0E0C8", background: "rgba(255,255,255,0.85)", fontSize: 19, cursor: "pointer", boxShadow: "var(--shadow-sm)", zIndex: 6, WebkitTapHighlightColor: "transparent" }}>
           🎓
         </button>
+      )}
+      {/* おやつさがしボタン */}
+      {feat("treatHunt") && (
+        <button type="button" onClick={() => setHunt(true)} aria-label="おやつさがし"
+          style={{ position: "absolute", top: 238, left: 8, width: 40, height: 40, borderRadius: "50%", border: "2px solid #F0E0C8", background: "rgba(255,255,255,0.85)", fontSize: 19, cursor: "pointer", boxShadow: "var(--shadow-sm)", zIndex: 6, WebkitTapHighlightColor: "transparent" }}>
+          🔎
+        </button>
+      )}
+      {hunt && (
+        <TreasureSheet
+          onClose={() => setHunt(false)}
+          onWin={() => {
+            setLife(markPlayed);
+            const an2 = a.current;
+            an2.lastInteract = an2.t;
+            if (an2.lift === 0 && an2.liftV === 0) an2.liftV = 170;
+            setBubble({ text: "みつけたね！ ぼくの かくしかた、まだまだだなあ", until: an2.t + 4.2 });
+            spawnHearts(2, false);
+          }}
+        />
       )}
       {tricks && <TrickSheet life={life} onClose={() => setTricks(false)} onTrick={doTrick} />}
       {trickToast && (
