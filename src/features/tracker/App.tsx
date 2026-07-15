@@ -186,7 +186,7 @@ export function App() {
       {sheet === "record" && <RecordSheet cur={cur} onClose={() => setSheet(null)} onSave={addRecord} />}
       {sheet === "import" && <ImportSheet onClose={() => setSheet(null)} onSave={addRecord} />}
       {feastFx && <FeastCelebration {...feastFx} onDone={() => setFeastFx(null)} />}
-      {!life.onboarded && <Onboarding onDone={(name, honorific) => setLife((s) => ({ ...s, name, honorific, onboarded: true }))} />}
+      {!life.onboarded && <Onboarding onDone={(name, honorific) => setLife((s) => ({ ...s, name, honorific, onboarded: true, adoptedDay: s.adoptedDay ?? dayKey() }))} />}
       {isDebug() && <DebugPanel life={life} setLife={setLife} />}
     </div>
   );

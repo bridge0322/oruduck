@@ -37,7 +37,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -103,6 +103,9 @@ export interface LifeState {
   missionCheeredDay: string | null;      // ミッション達成を犬が喜んだ最後の日
   // ---- v12: 不在シミュレーション（るすばん日記） ----
   pendingAbsence: number | null;         // 前回来訪からの空き日数（2以上で、おかえりカードで消費）
+  // ---- v13: うちのこ記念日 ----
+  adoptedDay: string | null;             // お迎え日（オンボーディング完了日。旧データは最古の記録から推定）
+  annivShownDay: string | null;          // 記念日のお祝いをした日（同日重複防止）
 }
 
 const KEY = "oruduck_life_v1";
@@ -131,7 +134,19 @@ export function defaultLife(): LifeState {
     lettersOpened: [], awards: [], lastAwardWeek: null,
     playedDay: null, missionCheeredDay: null,
     pendingAbsence: null,
+    adoptedDay: null, annivShownDay: null,
   };
+}
+
+// うちのこ記念日：お迎え日から 1週間・1か月・100日・毎年◯周年をお祝いする。
+export function anniversaryLabel(adoptedDay: string | null, today: string): string | null {
+  if (!adoptedDay) return null;
+  const days = diffDays(today, adoptedDay);
+  if (days === 7) return "いっしょに なって 1しゅうかん";
+  if (days === 30) return "いっしょに なって 1かげつ";
+  if (days === 100) return "うちのこ 100にちめ";
+  if (days > 0 && days % 365 === 0) return `うちのこ ${days / 365}しゅうねん`;
+  return null;
 }
 
 // るすばん日記：留守中の1日ごとの過ごし方。空き日数と犬の名前で決まり、
@@ -215,6 +230,10 @@ export function migrateLife(d: Partial<LifeState>): LifeState {
   // 着せ替えスロットに shirt を追加（旧データには無い）。欠けたスロットは null で補う。
   const w = (merged.wardrobe || {}) as Partial<LifeState["wardrobe"]>;
   merged.wardrobe = { collar: w.collar ?? null, bandana: w.bandana ?? null, hat: w.hat ?? null, shirt: w.shirt ?? null };
+  // お迎え日（v13）：旧データにはないので、残っている最古の記録から推定する。
+  if (!merged.adoptedDay && merged.onboarded) {
+    merged.adoptedDay = merged.history?.[0]?.day ?? merged.memories?.[0]?.day ?? merged.lastVisitDay ?? dayKey();
+  }
   return merged;
 }
 

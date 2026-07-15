@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { LifeCorgi } from "./LifeCorgi";
 import type { Accessory, EyeState, MouthState, Pose } from "./LifeCorgi";
-import { applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, jackpotKind, markPlayed, SLEEP_STYLES, treatsLeft, TREATS_PER_DAY } from "./lifeState";
+import { anniversaryLabel, applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, jackpotKind, markPlayed, SLEEP_STYLES, treatsLeft, TREATS_PER_DAY } from "./lifeState";
 import { JackpotSlot } from "./JackpotSlot";
 import type { LifeState, MemoryKind, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
@@ -292,6 +292,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       const ms = [100, 365, 500, 1000].find((m) => s.visitDayCount === m && s.milestoneShownAt < m);
       if (ms) q.push(`milestone.${ms}`);
     }
+    // うちのこ記念日（1週間・1か月・100日・毎年）
+    if (anniversaryLabel(s.adoptedDay, today) && s.annivShownDay !== today) q.push("anniv");
     if (s.todayRare && s.todayRare !== "rainbow") q.push(`rare.${s.todayRare}`);
     if (feat("houseUpgrade") && houseLevel > (s.lastHouseLevel ?? 0)) q.push("houseUp");
     if (feat("jackpotSlot") && !isMin) {
@@ -342,6 +344,18 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       say("tomorrow", undefined, 4800);
       setLife((s) => ({ ...s, pendingTomorrow: { day: dayKey(Date.now() + 86400000) } }));
       an.queueWait = 5;
+      return;
+    }
+    if (ev === "anniv") {
+      const al = anniversaryLabel(lifeRef.current.adoptedDay, today);
+      setBubble({ text: `きょうで ${al}！ これからも ずっと いっしょだよ`, until: an.t + 5.6 });
+      setLife((s) => ({ ...s, annivShownDay: today }));
+      if (!isMin) {
+        setConfetti(true);
+        an.fsm = "settleJump"; an.fsmT = 0; an.fsmDur = 2.2;
+        setTimeout(() => setConfetti(false), 3600);
+      }
+      an.queueWait = 6;
       return;
     }
     if (ev === "settle") {

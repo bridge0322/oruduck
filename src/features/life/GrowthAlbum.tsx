@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { Card } from "../../design-system/Card";
 import { metaOf } from "./memoryMeta";
+import { anniversaryLabel } from "./lifeState";
 import type { LifeState } from "./lifeState";
-import { dayKey } from "./time";
+import { dayKey, diffDays } from "./time";
 import { YEN } from "../tracker/logic/format";
 import { ROOM_STAGES, roomLevelFromAmount, endlessStage } from "../tracker/logic/roomStages";
 import type { Record_ } from "../tracker/logic/persistence";
@@ -32,6 +33,24 @@ export function GrowthAlbum({ life, records }: GrowthAlbumProps) {
 
   const events = useMemo(() => {
     const evs: AlbumEvent[] = [];
+
+    // うちのこになった日＋これまでの記念日（お迎え日から導出）
+    if (life.adoptedDay) {
+      evs.push({ day: life.adoptedDay, emoji: "🏡", text: "うちのこに なった ひ" });
+      const addDays = (day: string, n: number) => {
+        const [y, m, d] = day.split("-").map(Number);
+        return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+      };
+      const passed = diffDays(dayKey(), life.adoptedDay);
+      const marks = [7, 30, 100];
+      for (let yn = 365; yn <= passed; yn += 365) marks.push(yn);
+      for (const n of marks) {
+        if (n > passed) continue;
+        const day = addDays(life.adoptedDay, n);
+        const label = anniversaryLabel(life.adoptedDay, day);
+        if (label) evs.push({ day, emoji: "🎂", text: label });
+      }
+    }
 
     // はじめての記録＋ステージが変わった日
     if (records.length) {
