@@ -4,15 +4,18 @@ import { Badge } from "../../design-system/Badge";
 import { SegmentedControl } from "../../design-system/SegmentedControl";
 import { HistoryChart } from "./HistoryChart";
 import { GraphWalk } from "./GraphWalk";
+import { PawCalendar } from "./PawCalendar";
 import { YEN } from "./logic/format";
 import { feat } from "../life/features";
 import type { TrackerData } from "./logic/persistence";
+import type { LifeState } from "../life/lifeState";
 
 export interface HistoryScreenProps {
   data: TrackerData;
+  life: LifeState;
 }
 
-export function HistoryScreen({ data }: HistoryScreenProps) {
+export function HistoryScreen({ data, life }: HistoryScreenProps) {
   const recs = [...data.records].reverse();
   const [view, setView] = useState<"chart" | "walk">("chart");
   return (
@@ -27,6 +30,7 @@ export function HistoryScreen({ data }: HistoryScreenProps) {
         </div>
         {view === "walk" && feat("graphWalk") ? <GraphWalk records={data.records} /> : <HistoryChart records={data.records} />}
       </Card>
+      <PawCalendar life={life} records={data.records} />
       <Card elevation="sm">
         <div style={{ fontFamily: "var(--font-body)", fontWeight: 700, fontSize: "var(--text-base)", color: "var(--text-strong)", marginBottom: 8 }}>記録の履歴</div>
         <div style={{ display: "flex", flexDirection: "column" }}>
