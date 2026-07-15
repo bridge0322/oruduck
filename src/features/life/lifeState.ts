@@ -1,6 +1,8 @@
 // 「生きているコーギー」レイヤーの状態。既存の積立データ（orucogi_personal_v1）とは
 // 別キーで保存し、既存機能を壊さない。バージョンキーを持ち将来のマイグレーションに備える。
 import { dayKey, diffDays } from "./time";
+import { rollPersonality } from "./mood";
+import type { Personality } from "./mood";
 
 export type RareKind = "butterfly" | "star" | "twins" | "moon" | "rainbow";
 
@@ -37,7 +39,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -106,6 +108,8 @@ export interface LifeState {
   // ---- v13: うちのこ記念日 ----
   adoptedDay: string | null;             // お迎え日（オンボーディング完了日。旧データは最古の記録から推定）
   annivShownDay: string | null;          // 記念日のお祝いをした日（同日重複防止）
+  // ---- v14: 性格 ----
+  personality: Personality | null;       // その子の個性（名前＋お迎え日から固定）
 }
 
 const KEY = "oruduck_life_v1";
@@ -135,6 +139,7 @@ export function defaultLife(): LifeState {
     playedDay: null, missionCheeredDay: null,
     pendingAbsence: null,
     adoptedDay: null, annivShownDay: null,
+    personality: null,
   };
 }
 
@@ -233,6 +238,10 @@ export function migrateLife(d: Partial<LifeState>): LifeState {
   // お迎え日（v13）：旧データにはないので、残っている最古の記録から推定する。
   if (!merged.adoptedDay && merged.onboarded) {
     merged.adoptedDay = merged.history?.[0]?.day ?? merged.memories?.[0]?.day ?? merged.lastVisitDay ?? dayKey();
+  }
+  // 性格（v14）：まだ無い子には名前＋お迎え日から決定的に付与（もともとの個性として）。
+  if (!merged.personality && merged.onboarded) {
+    merged.personality = rollPersonality((merged.name || "") + "|" + (merged.adoptedDay || ""));
   }
   return merged;
 }

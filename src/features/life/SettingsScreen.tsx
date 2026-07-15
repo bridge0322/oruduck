@@ -5,6 +5,7 @@ import { Button } from "../../design-system/Button";
 import { SegmentedControl } from "../../design-system/SegmentedControl";
 import { Switch } from "../../design-system/Switch";
 import { feat } from "./features";
+import { personalityMeta } from "./mood";
 import { configureSound, playSound } from "./sound";
 import { DEFAULT_HOUSE_THRESHOLDS, withHonorific } from "./lifeState";
 import type { AnimLevel, Honorific, LifeState } from "./lifeState";
@@ -91,6 +92,23 @@ export function SettingsScreen({ life, setLife }: SettingsScreenProps) {
           </div>
         )}
       </Card>
+
+      {/* この子の性格（お迎えのときから決まっている個性・変更不可） */}
+      {life.personality && (
+        <Card elevation="sm" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 44, height: 44, flex: "none", borderRadius: "var(--radius-md)", background: "var(--brand-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
+            {personalityMeta(life.personality).emoji}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>
+              せいかく：{personalityMeta(life.personality).label}
+            </div>
+            <div style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", marginTop: 2, lineHeight: 1.5 }}>
+              {personalityMeta(life.personality).desc}
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>🎉 まいつきの つみたて日</div>

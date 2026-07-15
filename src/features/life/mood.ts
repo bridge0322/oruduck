@@ -32,7 +32,26 @@ function hash(s: string): number {
   return h >>> 0;
 }
 
-export function todayMood(t = Date.now()): MoodKind {
+// ---- 性格（うちに来たときから決まっている、その子の個性） ----
+export type Personality = "amaenbo" | "yancha" | "nonbiri";
+export const PERSONALITIES: { key: Personality; label: string; emoji: string; desc: string }[] = [
+  { key: "amaenbo", label: "あまえんぼ", emoji: "💞", desc: "くっつくのが だいすき。あまえた気分の日が おおい" },
+  { key: "yancha", label: "やんちゃ", emoji: "🌀", desc: "あそぶの だいすき。しっぽも ぶんぶん はやい" },
+  { key: "nonbiri", label: "のんびりや", emoji: "🍵", desc: "マイペースで おだやか。おひるねが とくい" },
+];
+export const personalityMeta = (p: Personality) => PERSONALITIES.find((x) => x.key === p) || PERSONALITIES[0];
+
+// 名前＋お迎え日から決定的に1つ固定（引き継いでも同じ子は同じ性格）。
+export function rollPersonality(seed: string): Personality {
+  return PERSONALITIES[hash("pers:" + seed) % PERSONALITIES.length].key;
+}
+
+// 今日の気分。性格があると、その子の得意な気分が出やすくなる（重み付き・同日固定）。
+export function todayMood(t = Date.now(), p: Personality | null = null): MoodKind {
   if (moodOverride) return moodOverride;
-  return MOODS[hash("mood:" + moodDayKey(t)) % 4].key;
+  const pool: MoodKind[] = ["genki", "mattari", "amae", "itazura"];
+  if (p === "amaenbo") pool.push("amae", "amae");
+  if (p === "yancha") pool.push("genki", "itazura");
+  if (p === "nonbiri") pool.push("mattari", "mattari");
+  return pool[hash("mood:" + moodDayKey(t)) % pool.length];
 }

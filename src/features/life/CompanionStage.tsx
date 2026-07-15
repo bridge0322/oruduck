@@ -158,7 +158,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const night = tt.h >= 19 || tt.h < 5;
   const weekend = isWeekend();
   const isMin = animLevel === "min";
-  const mood: MoodKind | undefined = feat("moodSystem") ? todayMood() : undefined;
+  const mood: MoodKind | undefined = feat("moodSystem") ? todayMood(Date.now(), life.personality ?? null) : undefined;
   const moodRef = useRef(mood);
   moodRef.current = mood;
   const [weather, setWeather] = useState<WeatherKind | undefined>(feat("weather") ? (cachedWeather() ?? undefined) : undefined);
@@ -505,7 +505,9 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       const an = a.current;
       an.t += dt;
       const moodTail = moodRef.current === "genki" ? 1.4 : moodRef.current === "mattari" ? 0.7 : 1;
-      an.tailPhase += dt * (4 + lifeRef.current.bond / 60) * an.tailSpeedMul * moodTail * (an.fsm === "sleep" ? 0.15 : 1);
+      // 性格：やんちゃはしっぽ速め、のんびりやはゆっくり
+      const persTail = lifeRef.current.personality === "yancha" ? 1.15 : lifeRef.current.personality === "nonbiri" ? 0.85 : 1;
+      an.tailPhase += dt * (4 + lifeRef.current.bond / 60) * an.tailSpeedMul * moodTail * persTail * (an.fsm === "sleep" ? 0.15 : 1);
 
       // 入場ダッシュ（1.2秒以内）
       if (an.phase === "enter") {
@@ -575,7 +577,9 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     const mk = moodRef.current;
     const actMul = mk === "genki" ? 1.9 : mk === "mattari" ? 0.5 : mk === "itazura" ? 1.5 : 1;
     const chaseMul = mk === "itazura" ? 3 : mk === "genki" ? 2 : mk === "mattari" ? 0.4 : 1;
-    const sleepAfter = mk === "mattari" ? 180 : mk === "genki" ? 420 : 300;
+    // 気分と性格で眠りやすさが変わる（のんびりやは早めにうとうと、やんちゃは寝ない）
+    const persSleep = lifeRef.current.personality === "nonbiri" ? 0.7 : lifeRef.current.personality === "yancha" ? 1.3 : 1;
+    const sleepAfter = (mk === "mattari" ? 180 : mk === "genki" ? 420 : 300) * persSleep;
     const talkChance = mk === "amae" ? 0.62 : mk === "mattari" ? 0.3 : 0.4;
 
     switch (an.fsm) {

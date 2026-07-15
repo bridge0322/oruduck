@@ -18,6 +18,7 @@ import { roomLevelFromAmount } from "./logic/roomStages";
 import { CompanionStage } from "../life/CompanionStage";
 import type { ValueDelta } from "../life/CompanionStage";
 import { beginVisit, callName, loadLife, saveLife } from "../life/lifeState";
+import { rollPersonality } from "../life/mood";
 import { Onboarding } from "../life/Onboarding";
 import { DiaryScreen } from "../life/DiaryScreen";
 import { MissionCard } from "../life/MissionCard";
@@ -186,7 +187,7 @@ export function App() {
       {sheet === "record" && <RecordSheet cur={cur} onClose={() => setSheet(null)} onSave={addRecord} />}
       {sheet === "import" && <ImportSheet onClose={() => setSheet(null)} onSave={addRecord} />}
       {feastFx && <FeastCelebration {...feastFx} onDone={() => setFeastFx(null)} />}
-      {!life.onboarded && <Onboarding onDone={(name, honorific) => setLife((s) => ({ ...s, name, honorific, onboarded: true, adoptedDay: s.adoptedDay ?? dayKey() }))} />}
+      {!life.onboarded && <Onboarding onDone={(name, honorific) => setLife((s) => ({ ...s, name, honorific, onboarded: true, adoptedDay: s.adoptedDay ?? dayKey(), personality: s.personality ?? rollPersonality(name + "|" + dayKey()) }))} />}
       {isDebug() && <DebugPanel life={life} setLife={setLife} />}
     </div>
   );
