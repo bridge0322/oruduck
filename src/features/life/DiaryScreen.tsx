@@ -10,6 +10,7 @@ import { GoalMap } from "./GoalMap";
 import { GrowthAlbum } from "./GrowthAlbum";
 import { metaOf } from "./memoryMeta";
 import { letterText, prevMonthKey } from "./letters";
+import { goalForecast } from "../tracker/logic/pace";
 import type { Record_ } from "../tracker/logic/persistence";
 
 // ひとこと日記帳＋今月のわたしたち＋おもいで図鑑＋ふれあいステータス
@@ -24,6 +25,8 @@ export interface DiaryScreenProps {
 
 export function DiaryScreen({ life, setLife, records }: DiaryScreenProps) {
   const principal = records.length ? records[records.length - 1].principal : 0;
+  // 目標ペース予測（直近の積立ペースから到達見込みを出す）
+  const forecast = useMemo(() => goalForecast(records, life.goalAmount), [records, life.goalAmount]);
   const [openLetter, setOpenLetter] = useState<string | null>(null);
   const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
 
@@ -97,11 +100,18 @@ export function DiaryScreen({ life, setLife, records }: DiaryScreenProps) {
       {/* 成長アルバム（この子との歩みタイムライン） */}
       <GrowthAlbum life={life} records={records} />
 
-      {/* 目標進捗お散歩マップ */}
+      {/* 目標進捗お散歩マップ＋目標ペース予測 */}
       {feat("goalMap") && principal > 0 && (
         <Card elevation="sm">
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)", marginBottom: 8 }}>🗺️ もくひょうへの おさんぽ</div>
           <GoalMap principal={principal} life={life} setLife={setLife} />
+          {forecast && (
+            <div style={{ marginTop: 10, fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", fontWeight: 700, color: "var(--text-muted)", textAlign: "center", lineHeight: 1.7 }}>
+              🐾 このちょうしなら、あと だいたい{" "}
+              <b style={{ color: "var(--text-brand)", fontSize: "var(--text-sm)" }}>{Math.max(1, Math.round(forecast.monthsLeft))}かげつ</b>
+              （{forecast.etaLabel}）で もくひょうに つきそうだよ！
+            </div>
+          )}
         </Card>
       )}
 
