@@ -8,6 +8,7 @@ import type { LifeState, MemoryKind, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
 import { affectionLvOf, fillVars, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
 import { pickMemoryLine } from "./memoryLines";
+import { seasonFor } from "./seasonDecor";
 import type { DialogueContext } from "./dialogueEngineV2";
 import { feat } from "./features";
 import { outfitOf } from "./dressup";
@@ -990,6 +991,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
 
   // ---- 空の色（時間帯グラデーション） ----
   const sky = useMemo(() => skyGradient(tt.h), [tt.h]);
+  // 季節と行事の飾りつけ（日付で決まる）
+  const season = useMemo(() => seasonFor(tt.mo, tt.d), [tt.mo, tt.d]);
   const rainCount = crash ? (crash.weather === "rain" ? 24 : crash.weather === "rain2" ? 40 : crash.weather === "storm" ? 54 : 0) : 0;
   const cloudy = crash && crash.level >= 1;
 
@@ -1101,6 +1104,22 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
 
       {/* 犬の家（積立累計でグレードアップ・犬の背後） */}
       {houseLevel >= 0 && <HouseBg level={houseLevel} />}
+
+      {/* 季節と行事の飾りつけ（日付で自動。小物は地面・粒子は空から） */}
+      {season && season.props.map((pr, i) => (
+        <span key={`sp${i}`} aria-hidden style={{ position: "absolute", left: pr.left, bottom: pr.bottom, fontSize: pr.size, zIndex: 1, pointerEvents: "none", animation: pr.sway && !isMin ? `sway ${2.6 + i * 0.7}s ease-in-out infinite` : undefined }}>
+          {pr.e}
+        </span>
+      ))}
+      {season?.particles && !isMin && (
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2 }}>
+          {Array.from({ length: season.particles.count }).map((_, i) => (
+            <span key={i} style={{ position: "absolute", left: `${(i * 83) % 100}%`, top: `${-16 + (i * 29) % 36}%`, fontSize: 11 + (i % 3) * 4, animation: `petal-fall ${(season.particles!.slow ? 7 : 4.5) + (i % 5)}s linear ${(i % 7) * 1.1}s infinite`, opacity: 0 }}>
+              {season.particles!.chars[i % season.particles!.chars.length]}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* 曇り・雨（相場のお天気） */}
       {cloudy && <div style={{ position: "absolute", inset: 0, background: "rgba(120,130,150,0.28)", pointerEvents: "none" }} />}

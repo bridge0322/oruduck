@@ -192,6 +192,8 @@ html, body { margin: 0; background: var(--surface-sunken); font-family: var(--fo
 @keyframes twinkle { 0%,100% { opacity: 0.9; } 50% { opacity: 0.25; } }
 @keyframes zzz-float { 0% { transform: translateY(0); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(-34px); opacity: 0; } }
 @keyframes confetti-fall { 0% { transform: translateY(-12px) rotate(0); opacity: 1; } 100% { transform: translateY(300px) rotate(540deg); opacity: 0; } }
+/* 季節の粒子（花びら・落ち葉）：ゆっくり落ちながら左右にゆれて回る */
+@keyframes petal-fall { 0% { transform: translateY(-24px) translateX(0) rotate(0); opacity: 0; } 8% { opacity: 0.95; } 50% { transform: translateY(170px) translateX(-16px) rotate(140deg); } 100% { transform: translateY(380px) translateX(12px) rotate(320deg); opacity: 0.6; } }
 
 /* 端末の「視差効果を減らす」設定に対応（アプリ内の CSS アニメを止める） */
 @media (prefers-reduced-motion: reduce) {
