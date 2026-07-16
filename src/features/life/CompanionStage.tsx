@@ -622,6 +622,20 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       const an = a.current;
       an.t += 0.5;
       an.blinkUntil = Math.random() < 0.12 ? an.t + 0.15 : an.blinkUntil;
+      // 入場は即完了扱いにする（縮小サイズで固まらないように）
+      if (an.phase === "enter") { an.enterT += 0.5; if (an.enterT >= 1.05) { an.phase = "live"; an.fsm = "idle"; an.fsmT = 0; } }
+      // 芸などの「時間で終わるポーズ」は min でも時間だけ進めて通常に戻す。
+      // これが無いと お手 などのポーズが解除されず固まる（sleep=1e9 は対象外）。
+      if (an.fsm !== "idle" && an.fsm !== "sleep" && an.fsmDur > 0 && an.fsmDur < 1e8) {
+        an.fsmT += 0.5;
+        if (an.fsmT >= an.fsmDur) { an.fsm = "idle"; an.fsmT = 0; an.trickId = null; an.xOff = 0; }
+      }
+      // ジャンプは必ず着地させる（「よし！」の芸などが liftV を入れる）
+      if (an.liftV !== 0 || an.lift > 0) {
+        an.liftV -= 0.5 * 560;
+        an.lift = Math.max(0, an.lift + an.liftV * 0.5);
+        if (an.lift === 0 && an.liftV < 0) an.liftV = 0;
+      }
       if (an.queue.length) {
         an.queueWait -= 0.5;
         if (an.queueWait <= 0) { const ev = an.queue.shift()!; runEvent(ev); }
