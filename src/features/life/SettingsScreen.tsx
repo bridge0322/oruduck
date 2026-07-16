@@ -113,14 +113,31 @@ export function SettingsScreen({ life, setLife }: SettingsScreenProps) {
       <Card elevation="sm" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-base)", color: "var(--text-strong)" }}>🎉 まいつきの つみたて日</div>
         <div style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", lineHeight: 1.6 }}>
-          この日に ひらくと、ダックスフンドが おいわい してくれるよ。
+          この日に ひらくと、ダックスフンドが おいわい してくれるよ。ふくすう とうろくOK。
+          31にち など「その月に ない日」は 月末に おいわいするよ。まえの日には よこくも してくれる。
         </div>
+        {(life.settleDays ?? []).length > 0 && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[...(life.settleDays ?? [])].sort((a, b) => a - b).map((d) => (
+              <button key={d} type="button"
+                onClick={() => setLife((s) => ({ ...s, settleDays: (s.settleDays ?? []).filter((x) => x !== d) }))}
+                aria-label={`毎月${d}日を削除`}
+                style={{ minHeight: 40, padding: "8px 12px", borderRadius: 999, border: "2px solid var(--brand)", background: "var(--brand-soft)", fontFamily: "var(--font-body)", fontWeight: 800, fontSize: "var(--text-sm)", color: "var(--text-brand)", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+                まいつき {d}にち ×
+              </button>
+            ))}
+          </div>
+        )}
         <select
-          value={life.settleDay ?? ""}
-          onChange={(e) => setLife((s) => ({ ...s, settleDay: e.target.value === "" ? null : +e.target.value }))}
+          value=""
+          onChange={(e) => {
+            const d = +e.target.value;
+            if (!d) return;
+            setLife((s) => ({ ...s, settleDays: (s.settleDays ?? []).includes(d) ? (s.settleDays ?? []) : [...(s.settleDays ?? []), d] }));
+          }}
           style={{ padding: "12px 14px", minHeight: 48, borderRadius: "var(--radius-md)", border: "2px solid var(--border-strong)", fontFamily: "var(--font-body)", fontSize: "var(--text-base)", background: "var(--surface-card)", color: "var(--text-body)", outline: "none" }}
         >
-          <option value="">せっていしない</option>
+          <option value="">＋ 日にちを ついか</option>
           {Array.from({ length: 31 }).map((_, i) => (
             <option key={i + 1} value={i + 1}>まいつき {i + 1}にち</option>
           ))}

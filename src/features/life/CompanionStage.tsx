@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { LifeCorgi } from "./LifeCorgi";
 import type { Accessory, EyeState, MouthState, Pose } from "./LifeCorgi";
-import { anniversaryLabel, applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, jackpotKind, markPlayed, SLEEP_STYLES, STREAK_MILESTONES, treatsLeft, TREATS_PER_DAY } from "./lifeState";
+import { anniversaryLabel, applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, effectiveSettleDays, jackpotKind, markPlayed, SLEEP_STYLES, STREAK_MILESTONES, treatsLeft, TREATS_PER_DAY } from "./lifeState";
 import { JackpotSlot } from "./JackpotSlot";
 import type { LifeState, MemoryKind, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
@@ -219,7 +219,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   const tomorrowEventKind = (): "settle" | "anniv" | null => {
     const s = lifeRef.current;
     const tMs = Date.now() + 86400000;
-    if (s.settleDay != null && tokyoTime(tMs).d === s.settleDay) return "settle";
+    const t2 = tokyoTime(tMs);
+    if ((s.settleDays ?? []).length > 0 && effectiveSettleDays(s.settleDays, t2.y, t2.mo).includes(t2.d)) return "settle";
     if (anniversaryLabel(s.adoptedDay, dayKey(tMs))) return "anniv";
     return null;
   };
@@ -354,7 +355,10 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       const jp = jackpotKind(value) ? value : jackpotKind(principal) ? principal : 0;
       if (jp && jp !== (s.jackpotShownValue ?? 0)) q.push(`jackpot.${jp}`);
     }
-    if (s.settleDay != null && tt.d === s.settleDay && s.lastSettleMonth !== monthKey()) q.push("settle");
+    // 積立日（複数可・31日は月末に繰り上げ）。同日1回だけ発火。
+    if ((s.settleDays ?? []).length > 0 &&
+        effectiveSettleDays(s.settleDays, tt.y, tt.mo).includes(tt.d) &&
+        s.lastSettleFireDay !== today) q.push("settle");
     if (valueDelta && valueDelta.dir !== "flat") q.push(`market.${valueDelta.dir}`);
     if (feat("visitors") && s.todayVisitor && !isMin) q.push("visitor");
     // 週1がんばったで賞：日曜の初回訪問
@@ -438,7 +442,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     }
     if (ev === "settle") {
       say("settle", undefined, 5000);
-      setLife((s) => ({ ...s, lastSettleMonth: monthKey(), today: { ...s.today, settle: true } }));
+      setLife((s) => ({ ...s, lastSettleFireDay: today, lastSettleMonth: monthKey(), today: { ...s.today, settle: true } }));
       if (!isMin) {
         setConfetti(true);
         an.fsm = "settleJump"; an.fsmT = 0; an.fsmDur = 2.2;

@@ -39,7 +39,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 17;
+export const SCHEMA_VERSION = 18;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -120,6 +120,9 @@ export interface LifeState {
   restTickets: number;                   // お休み券の保有数（上限2）。月替わり後の初訪問で+1
   ticketMonth: string | null;            // 最後に付与した月 "YYYY-MM"
   ticketUsedDay: string | null;          // きょう券を使った報告フラグ（犬が報告して消費）
+  // ---- v18: 積立日の複数登録 ----
+  settleDays: number[];                  // 毎月の積立日（複数可・1-31）。旧 settleDay から移行。以後こちらが正
+  lastSettleFireDay: string | null;      // 積立お祝いを発火した日 "YYYY-MM-DD"（同日重複防止・複数日対応）
 }
 
 const KEY = "oruduck_life_v1";
@@ -153,7 +156,18 @@ export function defaultLife(): LifeState {
     stageCelebrated: 0,
     streakCelebrated: 0,
     restTickets: 0, ticketMonth: null, ticketUsedDay: null,
+    settleDays: [], lastSettleFireDay: null,
   };
+}
+
+// その年月の日数（mo は 1-12）。
+export const daysInMonth = (y: number, mo: number) => new Date(Date.UTC(y, mo, 0)).getUTCDate();
+
+// その年月で実際にお祝いが発火する積立日。31日など「当月に存在しない日」は
+// 月末日に繰り上げる（例: 2月に31日設定 → 28日/うるう年29日）。重複は除去。
+export function effectiveSettleDays(days: number[], y: number, mo: number): number[] {
+  const dim = daysInMonth(y, mo);
+  return [...new Set(days.map((d) => Math.min(d, dim)))];
 }
 
 // ストリークの節目。ここを跨いだ初回訪問で小さな祝福を出す。
@@ -258,6 +272,12 @@ export function migrateLife(d: Partial<LifeState>): LifeState {
   // 性格（v14）：まだ無い子には名前＋お迎え日から決定的に付与（もともとの個性として）。
   if (!merged.personality && merged.onboarded) {
     merged.personality = rollPersonality((merged.name || "") + "|" + (merged.adoptedDay || ""));
+  }
+  // 積立日（v18）：旧 settleDay（単一）を settleDays（複数）へ移行。
+  // 注意: merged は defaultLife() 由来の settleDays:[] を必ず持つため、
+  // 「保存データ d 自体に settleDays が無い」ことで初回移行を判定する（冪等）。
+  if (!Array.isArray(d.settleDays)) {
+    merged.settleDays = merged.settleDay != null ? [merged.settleDay] : [];
   }
   // ストリーク節目（v16）：未初期化なら「現在の連続日数以下の最大節目」に同期して
   // 過去分のレトロ祝福を防ぐ（冪等：2回目以降は値があるので何もしない）。
