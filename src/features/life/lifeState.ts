@@ -39,7 +39,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -110,6 +110,8 @@ export interface LifeState {
   annivShownDay: string | null;          // 記念日のお祝いをした日（同日重複防止）
   // ---- v14: 性格 ----
   personality: Personality | null;       // その子の個性（名前＋お迎え日から固定）
+  // ---- v15: レベルアップ祝福 ----
+  stageCelebrated: number;               // 祝福済みの成長ステージ（0=未初期化。初回訪問で現在値に合わせる）
 }
 
 const KEY = "oruduck_life_v1";
@@ -140,6 +142,7 @@ export function defaultLife(): LifeState {
     pendingAbsence: null,
     adoptedDay: null, annivShownDay: null,
     personality: null,
+    stageCelebrated: 0,
   };
 }
 

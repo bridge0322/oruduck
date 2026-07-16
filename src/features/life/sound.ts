@@ -1,6 +1,6 @@
 // サウンド。外部音源を使わず Web Audio のオシレータ＋ノイズ合成で効果音を自作。
 // 既定OFF。設定でON＋音量。AudioContext はユーザー操作後の初回再生で遅延生成する。
-export type SoundName = "whine" | "crunch" | "snore" | "step" | "wag";
+export type SoundName = "whine" | "crunch" | "snore" | "step" | "wag" | "fanfare";
 
 let ctx: AudioContext | null = null;
 let enabled = false;
@@ -68,6 +68,14 @@ export function playSound(name: SoundName) {
       o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.08);
       const g = c.createGain(); env(g, t, 0.004, 0.1, 0.3);
       o.connect(g).connect(master); o.start(t); o.stop(t + 0.13);
+    } else if (name === "fanfare") { // ファンファーレ：ドミソド↑の明るいアルペジオ
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+      notes.forEach((f, i) => {
+        const tt = t + i * 0.14;
+        const o = c.createOscillator(); o.type = "triangle"; o.frequency.value = f;
+        const g = c.createGain(); env(g, tt, 0.01, i === notes.length - 1 ? 0.5 : 0.18, 0.4);
+        o.connect(g).connect(master); o.start(tt); o.stop(tt + (i === notes.length - 1 ? 0.6 : 0.24));
+      });
     } else if (name === "wag") { // しっぽぱたぱた：軽い木質音×2
       for (let i = 0; i < 2; i++) {
         const tt = t + i * 0.12;
