@@ -39,7 +39,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -112,6 +112,8 @@ export interface LifeState {
   personality: Personality | null;       // その子の個性（名前＋お迎え日から固定）
   // ---- v15: レベルアップ祝福 ----
   stageCelebrated: number;               // 祝福済みの成長ステージ（0=未初期化。初回訪問で現在値に合わせる）
+  // ---- v16: ストリーク節目祝福 ----
+  streakCelebrated: number;              // 祝福済みの最大節目（7,14,30,…）。マイグレーションで現状に同期
 }
 
 const KEY = "oruduck_life_v1";
@@ -143,8 +145,12 @@ export function defaultLife(): LifeState {
     adoptedDay: null, annivShownDay: null,
     personality: null,
     stageCelebrated: 0,
+    streakCelebrated: 0,
   };
 }
+
+// ストリークの節目。ここを跨いだ初回訪問で小さな祝福を出す。
+export const STREAK_MILESTONES = [7, 14, 30, 50, 100, 200, 365, 500, 1000];
 
 // うちのこ記念日：お迎え日から 1週間・1か月・100日・毎年◯周年をお祝いする。
 export function anniversaryLabel(adoptedDay: string | null, today: string): string | null {
@@ -245,6 +251,11 @@ export function migrateLife(d: Partial<LifeState>): LifeState {
   // 性格（v14）：まだ無い子には名前＋お迎え日から決定的に付与（もともとの個性として）。
   if (!merged.personality && merged.onboarded) {
     merged.personality = rollPersonality((merged.name || "") + "|" + (merged.adoptedDay || ""));
+  }
+  // ストリーク節目（v16）：未初期化なら「現在の連続日数以下の最大節目」に同期して
+  // 過去分のレトロ祝福を防ぐ（冪等：2回目以降は値があるので何もしない）。
+  if (!merged.streakCelebrated) {
+    merged.streakCelebrated = [...STREAK_MILESTONES].reverse().find((m) => merged.streak >= m) ?? 0;
   }
   return merged;
 }

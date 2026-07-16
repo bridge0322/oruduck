@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { LifeCorgi } from "./LifeCorgi";
 import type { Accessory, EyeState, MouthState, Pose } from "./LifeCorgi";
-import { anniversaryLabel, applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, jackpotKind, markPlayed, SLEEP_STYLES, treatsLeft, TREATS_PER_DAY } from "./lifeState";
+import { anniversaryLabel, applyHug, applyPet, applyTreat, bondLevel, clampBond, DEFAULT_HOUSE_THRESHOLDS, jackpotKind, markPlayed, SLEEP_STYLES, STREAK_MILESTONES, treatsLeft, TREATS_PER_DAY } from "./lifeState";
 import { JackpotSlot } from "./JackpotSlot";
 import type { LifeState, MemoryKind, RareKind } from "./lifeState";
 import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngine";
@@ -303,6 +303,11 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     } else if (level > s.stageCelebrated) {
       q.push("stageUp");
     }
+    // ストリークの節目（7,14,30,…日）を跨いだ初回訪問で小さな祝福
+    {
+      const mile = [...STREAK_MILESTONES].reverse().find((m) => s.streak >= m) ?? 0;
+      if (mile > (s.streakCelebrated ?? 0)) q.push(`streakMile.${mile}`);
+    }
     // うちのこ記念日（1週間・1か月・100日・毎年）
     if (anniversaryLabel(s.adoptedDay, today) && s.annivShownDay !== today) q.push("anniv");
     if (s.todayRare && s.todayRare !== "rainbow") q.push(`rare.${s.todayRare}`);
@@ -355,6 +360,17 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       say("tomorrow", undefined, 4800);
       setLife((s) => ({ ...s, pendingTomorrow: { day: dayKey(Date.now() + 86400000) } }));
       an.queueWait = 5;
+      return;
+    }
+    if (ev.startsWith("streakMile.")) {
+      const m = Number(ev.slice(11));
+      setBubble({ text: `れんぞく ${m}にち！ まいにち あえるの、ほんとに うれしいんだ`, until: an.t + 4.8 });
+      setLife((s) => ({ ...s, streakCelebrated: m }));
+      an.tailSpeedMul = 2;
+      setTimeout(() => { a.current.tailSpeedMul = 1; }, 2800);
+      if (!isMin && an.lift === 0 && an.liftV === 0) an.liftV = 150;
+      spawnHearts(2, false);
+      an.queueWait = 5.2;
       return;
     }
     if (ev === "stageUp") {

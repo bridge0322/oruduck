@@ -118,8 +118,15 @@ export function App() {
     <div className={life.animLevel == null ? "anim-auto" : undefined} style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "var(--surface-app)", display: "flex", flexDirection: "column" }}>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(12px + env(safe-area-inset-top,0px)) 20px 12px" }}>
         <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "var(--text-2xl)", color: "var(--text-strong)" }}>オルックス</h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-brand)", fontWeight: 800 }}>
-          <i className="ph-fill ph-star" /> おやつLv.{lvl}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-brand)", fontWeight: 800 }}>
+          {life.streak >= 2 && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "var(--brand-soft)", borderRadius: 999, padding: "3px 9px" }}>
+              🔥 {life.streak}日
+            </span>
+          )}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <i className="ph-fill ph-star" /> おやつLv.{lvl}
+          </span>
         </div>
       </header>
 
