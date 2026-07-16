@@ -39,7 +39,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 16;
+export const SCHEMA_VERSION = 17;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -114,6 +114,10 @@ export interface LifeState {
   stageCelebrated: number;               // 祝福済みの成長ステージ（0=未初期化。初回訪問で現在値に合わせる）
   // ---- v16: ストリーク節目祝福 ----
   streakCelebrated: number;              // 祝福済みの最大節目（7,14,30,…）。マイグレーションで現状に同期
+  // ---- v17: ストリーク保険（お休み券） ----
+  restTickets: number;                   // お休み券の保有数（上限2）。月替わり後の初訪問で+1
+  ticketMonth: string | null;            // 最後に付与した月 "YYYY-MM"
+  ticketUsedDay: string | null;          // きょう券を使った報告フラグ（犬が報告して消費）
 }
 
 const KEY = "oruduck_life_v1";
@@ -146,6 +150,7 @@ export function defaultLife(): LifeState {
     personality: null,
     stageCelebrated: 0,
     streakCelebrated: 0,
+    restTickets: 0, ticketMonth: null, ticketUsedDay: null,
   };
 }
 
@@ -317,15 +322,28 @@ export function beginVisit(s: LifeState, now = Date.now()): LifeState {
     next.today = emptyDay(today, next.bond);
   }
 
+  // お休み券：月替わり後の初訪問で1枚付与（上限2）。
+  const nowMonth = today.slice(0, 7);
+  if (next.ticketMonth !== nowMonth) {
+    next.restTickets = Math.min(2, (next.restTickets ?? 0) + 1);
+    next.ticketMonth = nowMonth;
+  }
+
   if (next.lastVisitDay) {
     const gap = diffDays(today, next.lastVisitDay);
     if (gap >= 2) next.pendingAbsence = gap; // るすばん日記を出す
     if (gap >= 3) {
+      // 2日以上の空きは保険適用外。責めずに寂しがるトーン（sadReunion）でリセット。
       next.bond = clampBond(next.bond - 5);
       next.sadReunion = true;
       next.streak = 1;
     } else if (gap === 1) {
       next.streak = next.streak + 1;
+    } else if (gap === 2 && (next.restTickets ?? 0) > 0) {
+      // 1日だけ空いた→お休み券を自動で1枚使ってストリーク維持。犬があとで報告する。
+      next.restTickets = next.restTickets - 1;
+      next.streak = next.streak + 1;
+      next.ticketUsedDay = today;
     } else if (gap > 1) {
       next.streak = 1;
     }

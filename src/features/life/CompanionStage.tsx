@@ -223,6 +223,11 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       return;
     }
     if (s.sadReunion) { say("sadReunion", undefined, dur); return; }
+    if (s.ticketUsedDay === today) {
+      setBubble({ text: "きのうは あえなかったけど、お休み券 つかっておいたよ。れんぞく つづいてるからね！", until: a.current.t + dur / 1000 });
+      setLife((st) => ({ ...st, ticketUsedDay: null }));
+      return;
+    }
     if (feat("exchangeDiary") && s.diaryReplyThanksDay && diffDays(today, s.diaryReplyThanksDay) >= 0) {
       setBubble({ text: "きのうの おへんじ、うれしかった！ ありがとう", until: a.current.t + dur / 1000 });
       setLife((st) => ({ ...st, diaryReplyThanksDay: null }));

@@ -25,7 +25,7 @@
 
 ## キー2: `oruduck_life_v1` — 生きている犬レイヤー（life）
 
-定義: `src/features/life/lifeState.ts`。`SCHEMA_VERSION` は **16**。
+定義: `src/features/life/lifeState.ts`。`SCHEMA_VERSION` は **17**。
 `migrateLife()` が旧バージョンを補完する（スプレッドで defaultLife() の既定値を埋める）。
 
 | フィールド | 型 | 導入 | 意味 |
@@ -58,6 +58,7 @@
 | personality | "amaenbo"/"yancha"/"nonbiri"/null | v14 | 性格（名前+お迎え日から決定的に固定） |
 | stageCelebrated | number | v15 | レベルアップ祝福済みの成長ステージ（0=未初期化→初回訪問で祝わず現在値に同期） |
 | streakCelebrated | number | v16 | ストリーク節目（7/14/30/50/100/200/365/500/1000）の祝福済み最大値。migrationで現streak以下の最大節目に同期 |
+| restTickets / ticketMonth / ticketUsedDay | number/string?/string? | v17 | お休み券（保有上限2・月替わり初訪問で+1・1日空きで自動消費しストリーク維持、犬が報告して消費） |
 
 ### 日付の扱い
 

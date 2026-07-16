@@ -269,7 +269,8 @@ export function SettingsScreen({ life, setLife }: SettingsScreenProps) {
       </Card>
 
       <div style={{ fontFamily: "var(--font-body)", fontSize: "var(--text-xs)", color: "var(--text-muted)", textAlign: "center", lineHeight: 1.6 }}>
-        なつき度：{life.bond}／100 ・ れんぞく {life.streak}日<br />
+        なつき度：{life.bond}／100 ・ れんぞく {life.streak}日 ・ お休み券 {life.restTickets ?? 0}枚<br />
+        （お休み券は 毎月1枚もらえて、1日あいても れんぞくを まもってくれるよ）<br />
         データは この端末にだけ ほぞんされます。
       </div>
     </div>
