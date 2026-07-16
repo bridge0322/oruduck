@@ -9,6 +9,7 @@ import { markUsed as markUsedOld, pickLine as pickLineOld } from "./dialogueEngi
 import { affectionLvOf, fillVars, hasV2Category, markUsedV2, pickTomorrowFollowup, pickV2 } from "./dialogueEngineV2";
 import { pickMemoryLine } from "./memoryLines";
 import { seasonFor } from "./seasonDecor";
+import { weekdayOf } from "./weekday";
 import type { DialogueContext } from "./dialogueEngineV2";
 import { feat } from "./features";
 import { outfitOf } from "./dressup";
@@ -232,6 +233,10 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       setBubble({ text: "そうだ、あしたは つみたての ひ！ いっしょに おいわい しようね", until: a.current.t + dur / 1000 });
     } else if (kind === "anniv") {
       setBubble({ text: "あした、なんだか とくべつな ひ に なる きが するんだ…ふふ", until: a.current.t + dur / 1000 });
+    } else if (feat("weekdayEvent") && Math.random() < 0.5) {
+      // 曜日イベントは毎日かならず起きるので、予告倒れしない確実なネタになる
+      const w = weekdayOf(tokyoTime(Date.now() + 86400000).dow);
+      setBubble({ text: w.preview, until: a.current.t + dur / 1000 });
     } else {
       say("tomorrow", undefined, dur);
     }
@@ -314,7 +319,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     else if (isFullMoon() && night) rare = "moon";
     // 遊びに来る動物（1日1回・約55%で来訪）。7種からまんべんなく。
     let visitor: VisitorKind | null = null;
-    if (feat("visitors") && Math.random() < 0.55) {
+    if (feat("visitors") && Math.random() < (tokyoTime().dow === 6 ? 0.75 : 0.55)) {
       const kinds: VisitorKind[] = ["cat", "bird", "butterfly", "squirrel", "hedgehog", "frog", "ladybug"];
       visitor = kinds[Math.floor(Math.random() * kinds.length)];
     }
@@ -365,6 +370,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
         s.lastSettleFireDay !== today) q.push("settle");
     if (valueDelta && valueDelta.dir !== "flat") q.push(`market.${valueDelta.dir}`);
     if (feat("visitors") && s.todayVisitor && !isMin) q.push("visitor");
+    // 曜日イベントの宣言（きょうは◯◯の ひ！ 1日1回）
+    if (feat("weekdayEvent") && s.wdayShownDay !== today) q.push("wday");
     // 週1がんばったで賞：日曜の初回訪問
     if (feat("weeklyAward") && tt.dow === 0 && firstVisitToday && s.lastAwardWeek !== today) q.push("award");
     a.current.queue = q;
@@ -406,6 +413,13 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (ev === "tomorrowSay") {
       sayTomorrowPreview(4800);
       an.queueWait = 5;
+      return;
+    }
+    if (ev === "wday") {
+      const w = weekdayOf(tt.dow);
+      setBubble({ text: `${w.emoji} きょうは ${w.label}！ ${w.line}`, until: an.t + 4.8 });
+      setLife((s) => ({ ...s, wdayShownDay: today }));
+      an.queueWait = 5.2;
       return;
     }
     if (ev.startsWith("streakMile.")) {
@@ -681,7 +695,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     const actMul = mk === "genki" ? 1.9 : mk === "mattari" ? 0.5 : mk === "itazura" ? 1.5 : 1;
     const chaseMul = mk === "itazura" ? 3 : mk === "genki" ? 2 : mk === "mattari" ? 0.4 : 1;
     // 気分と性格で眠りやすさが変わる（のんびりやは早めにうとうと、やんちゃは寝ない）
-    const persSleep = lifeRef.current.personality === "nonbiri" ? 0.7 : lifeRef.current.personality === "yancha" ? 1.3 : 1;
+    const persSleep = (lifeRef.current.personality === "nonbiri" ? 0.7 : lifeRef.current.personality === "yancha" ? 1.3 : 1) * (tokyoTime().dow === 0 ? 0.85 : 1); // のんびりの ひ は眠りやすい
     const sleepAfter = (mk === "mattari" ? 180 : mk === "genki" ? 420 : 300) * persSleep;
     const talkChance = mk === "amae" ? 0.62 : mk === "mattari" ? 0.3 : 0.4;
 
@@ -836,6 +850,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
           an.ball = null; an.xOff = 0; an.dir = 1; an.fsm = "idle"; an.fsmT = 0;
           an.lastInteract = an.t;
           if (an.lift === 0 && an.liftV === 0) an.liftV = 120; // うれしくてぴょん
+          if (tokyoTime().dow === 2) spawnHearts(1, false); // かけっこの ひ
           if (combo % 10 === 0) {
             setBubble({ text: `ボールめいじん！ ${combo}かい れんぞく！`, until: an.t + 4.2 });
             an.ballCombo = combo;
@@ -935,7 +950,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       spawnHearts(1 + Math.floor(Math.random() * 3), false);
       if (Math.random() < 0.35) playSound("wag");
       const before = lifeRef.current.petTotal;
-      setLife(applyPet);
+      setLife((s) => applyPet(s, tt.dow === 1 ? 12 : 10));
       const after = before + 1;
       if (after % 100 === 0) {
         say("pet100", after, 5200);
@@ -1000,7 +1015,8 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       const nc = c + 1;
       if (nc >= 20) {
         if (lifeRef.current.lastBrushDay !== today) {
-          setLife((s) => markPlayed({ ...s, bond: clampBond(s.bond + 1), lastBrushDay: today, today: { ...s.today, bond: clampBond(s.bond + 1) } }));
+          const gain = tt.dow === 3 ? 2 : 1; // ブラッシングの ひ は2倍
+          setLife((s) => markPlayed({ ...s, bond: clampBond(s.bond + gain), lastBrushDay: today, today: { ...s.today, bond: clampBond(s.bond + gain) } }));
         } else {
           setLife(markPlayed);
         }
@@ -1020,6 +1036,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (an.fsm === "sleep") { an.fsm = "idle"; an.fsmT = 0; }
     an.lastInteract = an.t;
     setBubble({ text: t.line, until: an.t + 3.6 });
+    if (tokyoTime().dow === 5) spawnHearts(1, false); // げいの ひ
     // 芸ごとに見た目のはっきり違うモーションへ。バーンだけは寝る演出を流用。
     if (t.motion === "bang") {
       an.fsm = "sleep"; an.fsmT = 0; an.fsmDur = 1e9;
@@ -1104,7 +1121,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     if (left <= 0 || an.bone || an.fsm === "eat") return;
     wakeIfSleeping();
     an.lastInteract = an.t;
-    setLife(applyTreat);
+    setLife((s) => applyTreat(s, tt.dow === 4 ? 3 : 2));
     if (isMin) { say(left - 1 <= 0 ? "treatDone" : "treat", undefined, 4200); return; }
     an.bone = { t: 0 };
     an.fsm = "catch"; an.fsmT = 0; an.fsmDur = 2;

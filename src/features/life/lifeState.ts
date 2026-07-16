@@ -39,7 +39,7 @@ export interface DayStats {
 
 export type AnimLevel = "full" | "soft" | "min";
 
-export const SCHEMA_VERSION = 18;
+export const SCHEMA_VERSION = 19;
 
 // 犬の家グレードの既定しきい値（積立累計額）。設定で変更可能。
 export const DEFAULT_HOUSE_THRESHOLDS = [500000, 2000000, 5000000];
@@ -123,6 +123,8 @@ export interface LifeState {
   // ---- v18: 積立日の複数登録 ----
   settleDays: number[];                  // 毎月の積立日（複数可・1-31）。旧 settleDay から移行。以後こちらが正
   lastSettleFireDay: string | null;      // 積立お祝いを発火した日 "YYYY-MM-DD"（同日重複防止・複数日対応）
+  // ---- v19: 曜日イベント ----
+  wdayShownDay: string | null;           // 「きょうは◯◯の ひ」を宣言した日（1日1回）
 }
 
 const KEY = "oruduck_life_v1";
@@ -157,6 +159,7 @@ export function defaultLife(): LifeState {
     streakCelebrated: 0,
     restTickets: 0, ticketMonth: null, ticketUsedDay: null,
     settleDays: [], lastSettleFireDay: null,
+    wdayShownDay: null,
   };
 }
 
@@ -383,9 +386,9 @@ export function beginVisit(s: LifeState, now = Date.now()): LifeState {
   return next;
 }
 
-// 撫でた（なつき度は1日+10まで）
-export function applyPet(s: LifeState): LifeState {
-  const canBond = s.bondPetToday < 10;
+// 撫でた（なつき度は1日 cap まで。既定10、なでなでの ひ は12）
+export function applyPet(s: LifeState, cap = 10): LifeState {
+  const canBond = s.bondPetToday < cap;
   return {
     ...s,
     petTotal: s.petTotal + 1,
@@ -403,9 +406,9 @@ export function applyHug(s: LifeState): LifeState {
 export const TREATS_PER_DAY = 3;
 export const treatsLeft = (s: LifeState) => TREATS_PER_DAY - s.today.treats;
 
-export function applyTreat(s: LifeState): LifeState {
+export function applyTreat(s: LifeState, gain = 2): LifeState {
   if (treatsLeft(s) <= 0) return s;
-  const bond = clampBond(s.bond + 2);
+  const bond = clampBond(s.bond + gain);
   return {
     ...s, bond, treatTotal: s.treatTotal + 1,
     today: { ...s.today, treats: s.today.treats + 1, bond },

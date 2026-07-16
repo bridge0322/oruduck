@@ -30,6 +30,7 @@ export interface Features {
   // 記憶
   memoryTalk: boolean;       // 思い出をふり返る会話
   treatHunt: boolean;        // おやつさがし（おわんシャッフル）
+  weekdayEvent: boolean;     // 曜日イベント（◯曜日は◯◯の日）
 }
 
 export const FEATURES: Features = {
@@ -56,6 +57,7 @@ export const FEATURES: Features = {
   weeklyAward: true,
   memoryTalk: true,
   treatHunt: true,
+  weekdayEvent: true,
 };
 
 // ?debug=1 でデバッグパネルを表示するかどうか。
