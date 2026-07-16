@@ -44,7 +44,7 @@
 | memories | {day,kind}[] | v1 | おもいで図鑑（レア/visit_*/sleep_*） |
 | usedLines | {id,day}[] | v1 | 旧セリフ重複回避（後方互換） |
 | animLevel | "full"/"soft"/"min"/null | v1 | アニメ強度（null=端末設定に従う） |
-| usedLinesV2 / pendingTomorrow | {id,day}[] / {day}? | v2 | 30日重複回避LRU(上限2000)・明日の予告 |
+| usedLinesV2 / pendingTomorrow | {id,day}[] / {day,kind?}? | v2 | 30日重複回避LRU(上限2000)・明日の予告（kind: settle/anniv=翌日の実イベントの確定予告・generic=汎用。旧データのkind無しはgeneric扱い） |
 | wardrobe | {collar,bandana,hat,shirt: string?} | v3 | 着せ替え装着中（アイテムid） |
 | ballBestCombo / trickMastery / lastBrushDay | number/Record/string? | v3 | 遊びの記録 |
 | visitorRolledDay / todayVisitor | string?/enum? | v4 | 来訪動物の抽選（7種） |

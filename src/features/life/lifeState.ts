@@ -74,7 +74,9 @@ export interface LifeState {
   animLevel: AnimLevel | null; // null = 端末設定（prefers-reduced-motion）に従う
   // ---- v2: DialogueEngine v2 ----
   usedLinesV2: { id: string; day: string }[]; // 30日重複回避（上限2,000 LRU）
-  pendingTomorrow: { day: string } | null;    // 明日の予告→翌日フォローアップ
+  // 明日の予告→翌日フォローアップ。kind は予告の種類（settle/anniv は翌日の実イベントを
+  // 指す確定予告で、翌日はイベント自身が発火するため followup は黙って消費する）。
+  pendingTomorrow: { day: string; kind?: "settle" | "anniv" | "generic" } | null;
   // ---- v3: Part B グループA（遊び） ----
   wardrobe: { collar: string | null; bandana: string | null; hat: string | null; shirt: string | null }; // 着せ替え装着中
   ballBestCombo: number;                 // ボール連続キャッチの最高記録

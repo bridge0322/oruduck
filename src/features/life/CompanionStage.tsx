@@ -214,13 +214,41 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     showLine(picked, dur, useV2);
   };
 
+  // 明日に確定しているイベント（積立日・記念日）。予告はこれと必ず整合させる：
+  // イベントがある日は確定でその予告を出し、翌日はイベント自身が発火して予告を回収する。
+  const tomorrowEventKind = (): "settle" | "anniv" | null => {
+    const s = lifeRef.current;
+    const tMs = Date.now() + 86400000;
+    if (s.settleDay != null && tokyoTime(tMs).d === s.settleDay) return "settle";
+    if (anniversaryLabel(s.adoptedDay, dayKey(tMs))) return "anniv";
+    return null;
+  };
+
+  // 明日の予告を発話し、翌日のフォローアップ（or イベント回収）を予約する。
+  const sayTomorrowPreview = (dur = 4800) => {
+    const kind = tomorrowEventKind() ?? "generic";
+    if (kind === "settle") {
+      setBubble({ text: "そうだ、あしたは つみたての ひ！ いっしょに おいわい しようね", until: a.current.t + dur / 1000 });
+    } else if (kind === "anniv") {
+      setBubble({ text: "あした、なんだか とくべつな ひ に なる きが するんだ…ふふ", until: a.current.t + dur / 1000 });
+    } else {
+      say("tomorrow", undefined, dur);
+    }
+    setLife((s) => ({ ...s, pendingTomorrow: { day: dayKey(Date.now() + 86400000), kind } }));
+  };
+
   // お出迎えのあいさつ：明日の予告の消費 → さみしい再会 → 文脈に合うカテゴリを重み付き抽選。
   const sayGreeting = (dur = 4600) => {
     const s = lifeRef.current;
     if (s.pendingTomorrow && diffDays(today, s.pendingTomorrow.day) >= 0) {
-      showLine(pickTomorrowFollowup(s), dur, false);
+      const k = s.pendingTomorrow.kind ?? "generic";
       setLife((st) => ({ ...st, pendingTomorrow: null }));
-      return;
+      if (k === "generic") {
+        showLine(pickTomorrowFollowup(s), dur, false);
+        return;
+      }
+      // settle / anniv の予告は、この後キューで実イベントが発火して回収するので
+      // ここでは前置きせず通常のお出迎えに進む。
     }
     if (s.sadReunion) { say("sadReunion", undefined, dur); return; }
     if (s.ticketUsedDay === today) {
@@ -254,6 +282,11 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
   // 放置中のひとりごと：独り言を中心に、豆知識・なつき度・季節・天気から。
   const sayIdle = (dur: number) => {
     const s = lifeRef.current;
+    // 夕方以降・まだ予告していなければ、放置のひとことでも明日の予告を挟む
+    // （離脱前の「また明日」フック。イベント確定日は優先度を上げる）。
+    if (feat("tomorrowPreview") && !s.pendingTomorrow && (slot === "evening" || slot === "late")) {
+      if (tomorrowEventKind() ? Math.random() < 0.5 : Math.random() < 0.15) { sayTomorrowPreview(dur); return; }
+    }
     // ときどき、これまでの積み重ねをふり返る「記憶する会話」を挟む。
     if (feat("memoryTalk") && Math.random() < 0.2) {
       const mem = pickMemoryLine(s);
@@ -355,15 +388,15 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       an.tailSpeedMul = 1.8; // うれしくてしっぽブンブン
       setTimeout(() => { a.current.tailSpeedMul = 1; }, 2600);
       an.queueWait = 4.6;
-      // 明日の予告（20%）：会話の最後に予告を差し込み、翌日フォローアップを予約
-      if (feat("tomorrowPreview") && !lifeRef.current.pendingTomorrow && Math.random() < 0.2) {
-        an.queue.push("tomorrowSay");
+      // 明日の予告：翌日にイベント（積立日・記念日）が確定していれば必ず予告し、
+      // なければ20%で汎用の楽しみセリフ。翌日フォローアップを予約する。
+      if (feat("tomorrowPreview") && !lifeRef.current.pendingTomorrow) {
+        if (tomorrowEventKind() || Math.random() < 0.2) an.queue.push("tomorrowSay");
       }
       return;
     }
     if (ev === "tomorrowSay") {
-      say("tomorrow", undefined, 4800);
-      setLife((s) => ({ ...s, pendingTomorrow: { day: dayKey(Date.now() + 86400000) } }));
+      sayTomorrowPreview(4800);
       an.queueWait = 5;
       return;
     }
