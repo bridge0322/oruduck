@@ -75,6 +75,22 @@ export function endlessStage(amount: number): StageInfo | null {
   };
 }
 
+// 祝福・進捗管理用の通し番号。成長ステージ(1-12)→生涯ステージ(12〜)→殿堂入り(20〜)。
+// 連番である必要はなく「昇格すると必ず増える（単調増加）」ことだけを保証する。
+// Lv12「ずっと一緒！」(¥100万)と生涯ステージ先頭は同じ称号なので ord も一致する(12)。
+export function stageOrdinal(principal: number): { ord: number; title: string } {
+  const e = endlessStage(principal);
+  if (!e) {
+    const lv = roomLevelFromAmount(principal);
+    return { ord: lv, title: ROOM_STAGES[lv - 1].name };
+  }
+  const idx = NAMED_LIFE_STAGES.findIndex((s) => s.title === e.title);
+  if (idx >= 0) return { ord: 12 + idx, title: e.title };
+  const m = /殿堂入り (\d+)世/.exec(e.title);
+  const n = m ? +m[1] : 1;
+  return { ord: 12 + NAMED_LIFE_STAGES.length + n, title: e.title };
+}
+
 export function roomParamsFor(level: number): RoomParams {
   const t = (level - 1) / 11;
   const lerp = (a: number, b: number) => a + (b - a) * t;

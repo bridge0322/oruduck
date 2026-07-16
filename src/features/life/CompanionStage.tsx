@@ -24,7 +24,7 @@ import { cachedWeather, fetchWeather } from "./weatherApi";
 import { configureSound, playSound } from "./sound";
 import { dayKey, diffDays, isFullMoon, isWeekend, monthKey, timeSlot, tokyoTime } from "./time";
 import type { CrashState } from "../tracker/logic/feast";
-import { ROOM_STAGES } from "../tracker/logic/roomStages";
+import { stageOrdinal } from "../tracker/logic/roomStages";
 
 // 「生きているコーギー」の舞台。単一の requestAnimationFrame ループで
 // お出迎えダッシュ → アイドル・ステートマシン → ふれあい/演出 を駆動する。
@@ -334,13 +334,17 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       const ms = [100, 365, 500, 1000].find((m) => s.visitDayCount === m && s.milestoneShownAt < m);
       if (ms) q.push(`milestone.${ms}`);
     }
-    // レベルアップ祝福：成長ステージが上がった初回訪問で1回だけ。
+    // レベルアップ祝福：成長ステージ（1-12）と、その先の生涯ステージ（称号）の
+    // 昇格を通し番号 stageOrdinal で判定。上がった初回訪問で1回だけ。
     // stageCelebrated===0 は未初期化（導入前からのデータ or 新規）なので、
-    // 祝わずに現在レベルへ静かに合わせる（レトロ祝福の嵐を防ぐ）。
-    if ((s.stageCelebrated ?? 0) === 0) {
-      setLife((s2) => ({ ...s2, stageCelebrated: level }));
-    } else if (level > s.stageCelebrated) {
-      q.push("stageUp");
+    // 祝わずに現在値へ静かに合わせる（レトロ祝福の嵐を防ぐ）。
+    {
+      const { ord } = stageOrdinal(principal);
+      if ((s.stageCelebrated ?? 0) === 0) {
+        setLife((s2) => ({ ...s2, stageCelebrated: ord }));
+      } else if (ord > s.stageCelebrated) {
+        q.push("stageUp");
+      }
     }
     // ストリークの節目（7,14,30,…日）を跨いだ初回訪問で小さな祝福
     {
@@ -416,9 +420,12 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
       return;
     }
     if (ev === "stageUp") {
-      const stName = ROOM_STAGES[Math.min(level, ROOM_STAGES.length) - 1]?.name ?? "";
-      setBubble({ text: `レベルアップ！ 「${stName}」に なったよ！ もっと おおきく なるからね`, until: an.t + 5 });
-      setLife((s) => ({ ...s, stageCelebrated: level }));
+      const { ord, title } = stageOrdinal(principal);
+      const line = ord <= 12
+        ? `レベルアップ！ 「${title}」に なったよ！ もっと おおきく なるからね`
+        : `しょうかく！ きょうから 「${title}」だよ！ ここまで いっしょに きたね`;
+      setBubble({ text: line, until: an.t + 5 });
+      setLife((s) => ({ ...s, stageCelebrated: ord }));
       if (!isMin) {
         setConfetti(true);
         an.fsm = "settleJump"; an.fsmT = 0; an.fsmDur = 2.2;
