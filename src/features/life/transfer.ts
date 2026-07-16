@@ -56,6 +56,26 @@ export async function makeTransferCode(): Promise<string> {
 
 export interface ImportResult { ok: boolean; error?: string }
 
+// バックアップの中身をスキーマ検証する。壊れたデータで localStorage を
+// 上書きしないための関門（失敗したら一切書き込まない）。
+function validatePayload(payload: Record<string, unknown>): string | null {
+  if (!payload || typeof payload !== "object") return "データの かたちが ちがうみたい";
+  if (!payload.personal && !payload.life) return "ひきつぎデータが みつからなかったよ";
+  if (payload.personal) {
+    const p = payload.personal as Record<string, unknown>;
+    if (typeof p !== "object" || !Array.isArray(p.records)) return "つみたて記録が こわれているみたい";
+    for (const r of p.records as unknown[]) {
+      const rr = r as Record<string, unknown>;
+      if (typeof rr?.t !== "number" || typeof rr?.value !== "number") return "つみたて記録が こわれているみたい";
+    }
+  }
+  if (payload.life) {
+    const l = payload.life as Record<string, unknown>;
+    if (typeof l !== "object" || typeof l.v !== "number") return "犬の データが こわれているみたい";
+  }
+  return null;
+}
+
 // ひきつぎコード（またはバックアップファイルの中身）を読み込んで localStorage に反映する。
 // 成功したら呼び出し側でページを再読み込みすること（アプリは起動時にデータを読むため）。
 export async function applyTransferCode(code: string): Promise<ImportResult> {
@@ -73,9 +93,8 @@ export async function applyTransferCode(code: string): Promise<ImportResult> {
       return { ok: false, error: "ひきつぎコードの かたちが ちがうみたい" };
     }
     const payload = JSON.parse(new TextDecoder().decode(jsonBytes)) as Record<string, unknown>;
-    if (!payload || typeof payload !== "object" || (!payload.personal && !payload.life)) {
-      return { ok: false, error: "ひきつぎデータが みつからなかったよ" };
-    }
+    const bad = validatePayload(payload);
+    if (bad) return { ok: false, error: bad };
     if (payload.personal) localStorage.setItem(KEYS.personal, JSON.stringify(payload.personal));
     if (payload.life) localStorage.setItem(KEYS.life, JSON.stringify(payload.life));
     return { ok: true };
@@ -86,11 +105,30 @@ export async function applyTransferCode(code: string): Promise<ImportResult> {
 
 // ひきつぎコードをテキストファイルとして保存する。
 export function downloadTransferCode(code: string) {
-  const blob = new Blob([code], { type: "text/plain" });
+  downloadBlob(new Blob([code], { type: "text/plain" }), `oruduck-hikitsugi-${dayKey()}.txt`);
+}
+
+// 全データを素のJSONファイルとして保存する（人間可読なバックアップ）。
+// 復元は applyTransferCode が生JSONも受け付けるので同じ導線でよい。
+export function downloadBackupJson() {
+  const payload: Record<string, unknown> = { app: "oruduck", v: 1, at: new Date().toISOString() };
+  try {
+    const personal = localStorage.getItem(KEYS.personal);
+    if (personal) payload.personal = JSON.parse(personal);
+  } catch { /* 壊れた記録は含めない */ }
+  try {
+    const life = localStorage.getItem(KEYS.life);
+    if (life) payload.life = JSON.parse(life);
+  } catch { /* 同上 */ }
+  const name = `oruduck_backup_${dayKey().replaceAll("-", "")}.json`;
+  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }), name);
+}
+
+function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `oruduck-hikitsugi-${dayKey()}.txt`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();

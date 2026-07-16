@@ -9,7 +9,7 @@ import { personalityMeta } from "./mood";
 import { configureSound, playSound } from "./sound";
 import { DEFAULT_HOUSE_THRESHOLDS, withHonorific } from "./lifeState";
 import type { AnimLevel, Honorific, LifeState } from "./lifeState";
-import { applyTransferCode, downloadTransferCode, makeTransferCode } from "./transfer";
+import { applyTransferCode, downloadBackupJson, downloadTransferCode, makeTransferCode } from "./transfer";
 
 // せってい：よびな・毎月の積立日・アニメーションの強さ・データのひきつぎ。
 export interface SettingsScreenProps {
@@ -209,9 +209,14 @@ export function SettingsScreen({ life, setLife }: SettingsScreenProps) {
         </div>
 
         {/* つくる（バックアップ） */}
-        <Button variant="secondary" size="md" fullWidth onClick={makeCode}>
-          ひきつぎコードを つくる
-        </Button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button variant="secondary" size="md" fullWidth style={{ whiteSpace: "nowrap", padding: "12px 8px" }} onClick={makeCode}>
+            ひきつぎコードを つくる
+          </Button>
+          <Button variant="secondary" size="md" fullWidth style={{ whiteSpace: "nowrap", padding: "12px 8px" }} onClick={downloadBackupJson} iconLeft={<i className="ph ph-download-simple" />}>
+            バックアップを ほぞん
+          </Button>
+        </div>
         {exportCode && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <textarea readOnly value={exportCode} onFocus={(e) => e.currentTarget.select()} rows={3} style={taS} />
