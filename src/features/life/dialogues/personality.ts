@@ -172,8 +172,127 @@ const nonAffection = build("persona", "pers-non-aff", [
   "すき って ことば、ゆっくり いうと もっと すき に きこえる よ",
 ], { personality: ["nonbiri"], affectionLv: [3, 4] }, W);
 
+// ---- 性格 × 天気 ----
+const weatherLines = [
+  // 雨
+  ...build("persona", "pers-ama-rain", [
+    "あめの ひは、くっつく ための ひ だと おもうの",
+    "あめの おと きいてたら、{name}に あいたく なった",
+  ], { personality: ["amaenbo"], weather: ["rain"] }, W),
+  ...build("persona", "pers-yan-rain", [
+    "あめでも へいき！ みずたまり ジャンプ たいかい かいさい！",
+    "かみなり きらい じゃない よ。…ちょっと しっぽ さがってる けど",
+  ], { personality: ["yancha"], weather: ["rain"] }, W),
+  ...build("persona", "pers-non-rain", [
+    "あめの おとって、ねむく なるよねえ…",
+    "あめの ひは、いえで ゆっくり が いちばん だよ",
+  ], { personality: ["nonbiri"], weather: ["rain"] }, W),
+  // 晴れ
+  ...build("persona", "pers-ama-sun", [
+    "おひさま ぽかぽか。{name}の となりだと もっと ぽかぽか",
+  ], { personality: ["amaenbo"], weather: ["sunny"] }, W),
+  ...build("persona", "pers-yan-sun", [
+    "こんな はれの ひに はしらない なんて もったいない！",
+  ], { personality: ["yancha"], weather: ["sunny"] }, W),
+  ...build("persona", "pers-non-sun", [
+    "ひなたの いちとう ち、みつけて ある んだ。あとで おしえてあげる",
+  ], { personality: ["nonbiri"], weather: ["sunny"] }, W),
+  // 雪
+  ...build("persona", "pers-ama-snow", [
+    "ゆき つめたい…から、あったかい {name}に くっつくね",
+  ], { personality: ["amaenbo"], weather: ["snow"] }, W),
+  ...build("persona", "pers-yan-snow", [
+    "ゆきだ！！ ころがる！ ほって いい？ ねえ ほって いい？",
+  ], { personality: ["yancha"], weather: ["snow"] }, W),
+  ...build("persona", "pers-non-snow", [
+    "ゆきが ふる のを ながめる の、けっこう すき なんだよねえ",
+  ], { personality: ["nonbiri"], weather: ["snow"] }, W),
+  // 風
+  ...build("persona", "pers-yan-wind", [
+    "かぜと きょうそう したら、たぶん ぼくの かち",
+  ], { personality: ["yancha"], weather: ["wind"] }, W),
+  ...build("persona", "pers-non-wind", [
+    "かぜの ひは、みみが ぱたぱた して おもしろいねえ",
+  ], { personality: ["nonbiri"], weather: ["wind"] }, W),
+];
+
+// ---- 性格 × 相場 ----
+// 下げの日の受け止め方にその子らしさを出す。不安をやわらげる方向で統一し、
+// 煽り・後悔をにおわせる言い方はしない（このアプリの投資観：こつこつ長期）。
+const marketLines = [
+  ...build("persona", "pers-ama-mkt-up", [
+    "きょうは ちょうしが いいみたい。いっしょに よろこんで いい？",
+    "あがった ひは、{name}の えがおが みられる から すき",
+  ], { personality: ["amaenbo"], marketTrend: ["up"] }, W),
+  ...build("persona", "pers-ama-mkt-down", [
+    "さがった ひは、ぎゅ〜で じゅうでん しよ？ だいじょうぶ だから",
+    "こんな ひこそ そばに いるよ。ぼくの しごと だからね",
+  ], { personality: ["amaenbo"], marketTrend: ["down"] }, W),
+  ...build("persona", "pers-yan-mkt-up", [
+    "あがってる！ よーし、きょうは おいわい ダッシュ 3しゅう！",
+    "グラフが ジャンプ してる！ ぼくの ジャンプと どっちが たかい？",
+  ], { personality: ["yancha"], marketTrend: ["up"] }, W),
+  ...build("persona", "pers-yan-mkt-down", [
+    "さがった？ ふーん。ぼくらは げんき だから もんだい なし！",
+    "そういう ひも ある ある。ボール なげたら わすれちゃうよ",
+  ], { personality: ["yancha"], marketTrend: ["down"] }, W),
+  ...build("persona", "pers-non-mkt-up", [
+    "あがった ねえ。でも まあ、いつもどおり いこっか",
+    "いい ひ だねえ。こういう ひは おぼえて おくと いいよ",
+  ], { personality: ["nonbiri"], marketTrend: ["up"] }, W),
+  ...build("persona", "pers-non-mkt-down", [
+    "さがる ひも ある。ながい みちの とちゅうだ もの、あわてない",
+    "やまも たにも、さんぽ みちの けしき の ひとつ だよ",
+  ], { personality: ["nonbiri"], marketTrend: ["down"] }, W),
+];
+
+// ---- 性格 × 時間帯 ----
+const timeLines = [
+  ...build("persona", "pers-ama-morning", [
+    "おはよう の ぎゅ〜、まだ うけつけ ちゅう です",
+  ], { personality: ["amaenbo"], timeOfDay: ["morning"] }, W),
+  ...build("persona", "pers-ama-late", [
+    "ねるまえに あえた…きょう いちばん うれしい かも",
+  ], { personality: ["amaenbo"], timeOfDay: ["late"] }, W),
+  ...build("persona", "pers-yan-morning", [
+    "あさから ぜんかい！ あさごはん まえに ひとはしり どう？",
+  ], { personality: ["yancha"], timeOfDay: ["morning"] }, W),
+  ...build("persona", "pers-yan-late", [
+    "よる は しずかに…って むずかしい ね。こっそり あそぶ？",
+  ], { personality: ["yancha"], timeOfDay: ["late"] }, W),
+  ...build("persona", "pers-non-morning", [
+    "あさは ゆっくり おきる は。にどね は ぶんか だよ",
+  ], { personality: ["nonbiri"], timeOfDay: ["morning"] }, W),
+  ...build("persona", "pers-non-late", [
+    "よるの まったり、いちにちの ごほうび だねえ",
+  ], { personality: ["nonbiri"], timeOfDay: ["late"] }, W),
+];
+
+// ---- 性格 × 季節（夏・冬だけ厳選） ----
+const seasonLines = [
+  ...build("persona", "pers-ama-summer", [
+    "あつい けど、くっつく のは やめない よ。ひんやり ゆか で いっしょに ね",
+  ], { personality: ["amaenbo"], month: [7, 8] }, W),
+  ...build("persona", "pers-yan-summer", [
+    "なつだ！ みずあそび したい！ ホース もってきて いい？",
+  ], { personality: ["yancha"], month: [7, 8] }, W),
+  ...build("persona", "pers-non-summer", [
+    "あつい ひは むり しない。ひかげで とけて よう",
+  ], { personality: ["nonbiri"], month: [7, 8] }, W),
+  ...build("persona", "pers-ama-winter", [
+    "さむい ひの ぎゅ〜は、こうかが 2ばい なんだって",
+  ], { personality: ["amaenbo"], month: [12, 1, 2] }, W),
+  ...build("persona", "pers-yan-winter", [
+    "さむさ なんて はしれば かんけい ない！ …こたつ？ すき だけど？",
+  ], { personality: ["yancha"], month: [12, 1, 2] }, W),
+  ...build("persona", "pers-non-winter", [
+    "ふゆは まるく なる きせつ。ぼく、まるく なる の とくい だよ",
+  ], { personality: ["nonbiri"], month: [12, 1, 2] }, W),
+];
+
 export const personalityLines: Line[] = [
   ...amaGreet, ...amaMood, ...amaMurmur, ...amaAffection,
   ...yanGreet, ...yanMood, ...yanMurmur, ...yanAffection,
   ...nonGreet, ...nonMood, ...nonMurmur, ...nonAffection,
+  ...weatherLines, ...marketLines, ...timeLines, ...seasonLines,
 ];
