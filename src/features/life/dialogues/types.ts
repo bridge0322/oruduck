@@ -3,6 +3,7 @@ export type TimeOfDay = "morning" | "day" | "evening" | "late";
 export type MoodKind = "genki" | "mattari" | "amae" | "itazura"; // 今日の気分
 export type MarketTrend = "up" | "down" | "flat";
 export type WeatherKind = "sunny" | "cloudy" | "rain" | "snow" | "wind";
+export type PersonalityKind = "amaenbo" | "yancha" | "nonbiri"; // 性格（mood.ts の Personality と同値）
 
 export interface LineConditions {
   timeOfDay?: TimeOfDay[];
@@ -13,6 +14,7 @@ export interface LineConditions {
   weather?: WeatherKind[];
   marketTrend?: MarketTrend[];
   minStreak?: number;
+  personality?: PersonalityKind[]; // その子の性格（v14）。指定時は一致した子だけが話す
 }
 
 export interface Line {

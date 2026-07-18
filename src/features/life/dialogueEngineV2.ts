@@ -2,7 +2,7 @@
 // 2,050本の ALL_LINES から、現在の文脈（時間帯/曜日/月/気分/なつき度/天気/相場/連続）で
 // 候補を絞り、最近30日に出していないものを優先して1本選ぶ。
 import { ALL_LINES } from "./dialogues/index";
-import type { Line, MarketTrend, MoodKind, TimeOfDay, WeatherKind } from "./dialogues/types";
+import type { Line, MarketTrend, MoodKind, PersonalityKind, TimeOfDay, WeatherKind } from "./dialogues/types";
 import { bondLevel, callName } from "./lifeState";
 import type { LifeState } from "./lifeState";
 import { diffDays } from "./time";
@@ -16,6 +16,7 @@ export interface DialogueContext {
   mood?: MoodKind;
   weather?: WeatherKind;
   marketTrend?: MarketTrend;
+  personality?: PersonalityKind; // その子の性格（v14）
 }
 
 // カテゴリ索引（起動時に一度だけ構築）
@@ -39,6 +40,7 @@ function matches(line: Line, ctx: DialogueContext): boolean {
   if (c.weather && (!ctx.weather || !c.weather.includes(ctx.weather))) return false;
   if (c.marketTrend && (!ctx.marketTrend || !c.marketTrend.includes(ctx.marketTrend))) return false;
   if (c.minStreak != null && ctx.streak < c.minStreak) return false;
+  if (c.personality && (!ctx.personality || !c.personality.includes(ctx.personality))) return false;
   return true;
 }
 

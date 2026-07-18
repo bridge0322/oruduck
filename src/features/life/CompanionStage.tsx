@@ -195,6 +195,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     marketTrend: valueDelta ? valueDelta.dir : undefined,
     mood: moodRef.current,
     weather: weatherRef.current,
+    personality: lifeRef.current.personality ?? undefined,
   });
 
   const showLine = (picked: { id: string; text: string } | null, dur: number, v2: boolean) => {
@@ -277,6 +278,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     }
     const ctx = dctx();
     const cats = ["greet", "greet", "weekday", "season", "knowledge", "affection", "murmur"];
+    if (ctx.personality) cats.push("persona", "persona"); // 性格セリフ（その子らしさ）を出やすく
     if (ctx.mood) cats.push("mood", "mood");
     if (ctx.weather) cats.push("weather");
     if (ctx.streak >= 2 && Math.random() < 0.3) cats.push("streak", "streak");
@@ -300,6 +302,7 @@ export function CompanionStage({ life, setLife, level, crash, valueDelta, animLe
     }
     const ctx = dctx();
     let cats = ["murmur", "murmur", "knowledge", "affection", "season"];
+    if (ctx.personality) cats.push("persona", "persona");
     if (ctx.mood) cats.push("mood", "mood");
     if (ctx.weather) cats.push("weather");
     if (affectionLvOf(s) >= 4 && Math.random() < 0.2) cats = ["affection"];
